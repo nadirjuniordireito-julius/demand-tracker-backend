@@ -17,6 +17,7 @@ public class ProjetoDTO {
     private String codTed;
     private LocalDate termoInicial;
     private LocalDate termoFinal;
+    private LocalDate dataEfetivaInicio;
     private LocalDateTime dataUpdate;
     private Long usuarioId;
     private UsuarioDTO usuario;
@@ -28,6 +29,7 @@ public class ProjetoDTO {
         dto.setCodTed(projeto.getCodTed());
         dto.setTermoInicial(projeto.getTermoInicial());
         dto.setTermoFinal(projeto.getTermoFinal());
+        dto.setDataEfetivaInicio(projeto.getDataEfetivaInicio());
         dto.setDataUpdate(projeto.getDataUpdate());
         dto.setUsuarioId(projeto.getUsuario().getId());
         if (projeto.getUsuario() != null) {

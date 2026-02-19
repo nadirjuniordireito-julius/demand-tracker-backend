@@ -3,19 +3,21 @@ package com.demandtracker.entity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "demandas_tecnicas")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class DemandaTecnica {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
     
     @ManyToOne(fetch = FetchType.LAZY)
@@ -27,6 +29,9 @@ public class DemandaTecnica {
     
     @Column(nullable = false, length = 200)
     private String nome;
+    
+    @Column(columnDefinition = "TEXT")
+    private String descricao; // Campo opcional para descrição formatada (HTML)
     
     @Column(nullable = false)
     private LocalDateTime dataAbertura;
@@ -43,6 +48,27 @@ public class DemandaTecnica {
     
     @OneToOne(mappedBy = "demandaTecnica", cascade = CascadeType.ALL, orphanRemoval = true)
     private TermoEncerramento termoEncerramento;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "meta_produto_id", nullable = true)
+    private MetaProduto metaProduto;
+    
+    /**
+     * Status = Encerrado e assinado (G).
+     * Único status que permite criar avaliação da demanda.
+     * @see com.demandtracker.entity.enums.StatusDemandaTecnica
+     */
+    public static final String STATUS_ENCERRADA = "G";
+
+    /** Código do status (A=Em elaboração, B=Em abertura, C=Aberta e assinada, D=Em planejamento, E=Planejado e assinado, F=Em encerramento, G=Encerrado e assinado, Z=Cancelada). */
+    @Column(name = "status", nullable = true, length = 1)
+    private String status;
+
+    @Column(name = "avaliacao_disponivel")
+    private Boolean avaliacaoDisponivel = false;
+
+    @OneToOne(mappedBy = "demanda", cascade = CascadeType.ALL, orphanRemoval = true)
+    private DemandaAvaliacao avaliacao;
     
     @PrePersist
     protected void onCreate() {

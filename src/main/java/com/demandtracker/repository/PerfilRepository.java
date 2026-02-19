@@ -9,4 +9,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface PerfilRepository extends JpaRepository<Perfil, Long> {
     Page<Perfil> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
+    Page<Perfil> findByProjetoId(Long projetoId, Pageable pageable);
+    Page<Perfil> findByNomeContainingIgnoreCaseAndProjetoId(String nome, Long projetoId, Pageable pageable);
 }

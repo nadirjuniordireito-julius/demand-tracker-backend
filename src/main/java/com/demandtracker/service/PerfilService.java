@@ -25,11 +25,15 @@ public class PerfilService {
     private final UsuarioRepository usuarioRepository;
     private final ProjetoRepository projetoRepository;
     
-    public Page<PerfilDTO> findAll(String nome, Pageable pageable) {
+    public Page<PerfilDTO> findAll(String nome, Long projetoId, Pageable pageable) {
         Page<Perfil> perfis;
         
-        if (nome != null) {
+        if (nome != null && projetoId != null) {
+            perfis = perfilRepository.findByNomeContainingIgnoreCaseAndProjetoId(nome, projetoId, pageable);
+        } else if (nome != null) {
             perfis = perfilRepository.findByNomeContainingIgnoreCase(nome, pageable);
+        } else if (projetoId != null) {
+            perfis = perfilRepository.findByProjetoId(projetoId, pageable);
         } else {
             perfis = perfilRepository.findAll(pageable);
         }
@@ -42,6 +46,7 @@ public class PerfilService {
             .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado com ID: " + id));
         return PerfilDTO.fromEntity(perfil);
     }
+    
     
     @Transactional
     public PerfilDTO create(PerfilCreateDTO dto) {
@@ -59,6 +64,7 @@ public class PerfilService {
         perfil.setNome(dto.getNome());
         perfil.setTermoInicial(dto.getTermoInicial());
         perfil.setTermoFinal(dto.getTermoFinal());
+        perfil.setValor(dto.getValor());
         perfil.setUsuario(usuario);
         perfil.setProjeto(projeto);
         
@@ -79,6 +85,9 @@ public class PerfilService {
         }
         if (dto.getTermoFinal() != null) {
             perfil.setTermoFinal(dto.getTermoFinal());
+        }
+        if (dto.getValor() != null) {
+            perfil.setValor(dto.getValor());
         }
         if (dto.getUsuarioId() != null) {
             Usuario usuario = usuarioRepository.findById(dto.getUsuarioId())

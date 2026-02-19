@@ -6,12 +6,20 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class TermoPlanejamentoUpdateDTO {
+    private LocalDateTime dataAbertura;
+    
+    private LocalDate dataInicioExecucao;
+    
+    private LocalDate dataFimExecucao;
+    
     @Size(min = 10, max = 5000, message = "Especificação deve ter entre 10 e 5000 caracteres")
     private String especificacao;
     

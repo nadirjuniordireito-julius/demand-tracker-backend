@@ -9,8 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
+import com.demandtracker.entity.enums.StatusDemandaTecnica;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +49,7 @@ public class TermoAberturaService {
         
         TermoAbertura termo = new TermoAbertura();
         termo.setDemandaTecnica(demanda);
+        termo.setDataAbertura(dto.getDataAbertura());
         termo.setDescricao(dto.getDescricao());
         termo.setUsuario(usuario);
         
@@ -62,6 +62,9 @@ public class TermoAberturaService {
         TermoAbertura termo = termoRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Termo de abertura não encontrado com ID: " + id));
         
+        if (dto.getDataAbertura() != null) {
+            termo.setDataAbertura(dto.getDataAbertura());
+        }
         if (dto.getDescricao() != null) {
             termo.setDescricao(dto.getDescricao());
         }
@@ -75,8 +78,15 @@ public class TermoAberturaService {
         TermoAbertura termo = termoRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Termo de abertura não encontrado com ID: " + id));
         
-        termo.setDataAssinatura(LocalDateTime.now());
+        // termo.setDataAssinatura(LocalDateTime.now());
         TermoAbertura saved = termoRepository.save(termo);
+       
+        DemandaTecnica demanda = saved.getDemandaTecnica();
+        if (demanda != null) {
+            demanda.setStatus(StatusDemandaTecnica.C.getCodigo()    );
+            demandaRepository.save(demanda);
+        }
+
         return TermoAberturaDTO.fromEntity(saved);
     }
     

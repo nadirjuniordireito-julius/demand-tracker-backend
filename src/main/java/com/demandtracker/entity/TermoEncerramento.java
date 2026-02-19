@@ -3,8 +3,10 @@ package com.demandtracker.entity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -13,9 +15,11 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class TermoEncerramento {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
     
     @OneToOne(fetch = FetchType.LAZY)
@@ -35,11 +39,12 @@ public class TermoEncerramento {
     @Column
     private LocalDateTime dataAssinatura;
     
+    @Column(name = "data_inicio_execucao", nullable = true)
+    private LocalDate dataInicioExecucao;
+    
+    @Column(name = "data_fim_execucao", nullable = true)
+    private LocalDate dataFimExecucao;
+    
     @OneToMany(mappedBy = "termoEncerramento", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TermoEncerramentoCusto> custos;
-    
-    @PrePersist
-    protected void onCreate() {
-        dataTermo = LocalDateTime.now();
-    }
 }

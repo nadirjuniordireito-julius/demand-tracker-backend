@@ -7,12 +7,17 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class TermoAberturaCreateDTO {
     @NotNull(message = "ID da demanda técnica é obrigatório")
     private Long demandaTecnicaId;
+    
+    @NotNull(message = "Data de abertura é obrigatória")
+    private LocalDateTime dataAbertura;
     
     @NotBlank(message = "Descrição é obrigatória")
     @Size(min = 10, max = 2000, message = "Descrição deve ter entre 10 e 2000 caracteres")

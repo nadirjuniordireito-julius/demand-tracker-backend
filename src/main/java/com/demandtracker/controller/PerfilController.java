@@ -20,9 +20,10 @@ public class PerfilController {
     @GetMapping
     public ResponseEntity<Page<PerfilDTO>> findAll(
         @RequestParam(required = false) String nome,
+        @RequestParam(required = false) Long projetoId,
         Pageable pageable
     ) {
-        return ResponseEntity.ok(perfilService.findAll(nome, pageable));
+        return ResponseEntity.ok(perfilService.findAll(nome, projetoId, pageable));
     }
     
     @GetMapping("/{id}")

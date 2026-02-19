@@ -1,6 +1,10 @@
 package com.demandtracker.controller;
 
-import com.demandtracker.dto.*;
+import com.demandtracker.dto.ProjetoCreateDTO;
+import com.demandtracker.dto.ProjetoDTO;
+import com.demandtracker.dto.ProjetoTotaisDTO;
+import com.demandtracker.dto.ProjetoUpdateDTO;
+import com.demandtracker.dto.SemaforoNodeDTO;
 import com.demandtracker.service.ProjetoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +34,16 @@ public class ProjetoController {
     @GetMapping("/{id}")
     public ResponseEntity<ProjetoDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(projetoService.findById(id));
+    }
+
+    @GetMapping("/{id}/totais")
+    public ResponseEntity<ProjetoTotaisDTO> getTotais(@PathVariable Long id) {
+        return ResponseEntity.ok(projetoService.getTotais(id));
+    }
+
+    @GetMapping("/{id}/semaforo")
+    public ResponseEntity<SemaforoNodeDTO> getSemaforo(@PathVariable Long id) {
+        return ResponseEntity.ok(projetoService.getSemaforo(id));
     }
     
     @PostMapping

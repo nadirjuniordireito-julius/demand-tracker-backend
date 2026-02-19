@@ -21,5 +21,7 @@ public class ProjetoUpdateDTO {
     
     private LocalDate termoFinal;
     
+    private LocalDate dataEfetivaInicio;
+    
     private Long usuarioId;
 }

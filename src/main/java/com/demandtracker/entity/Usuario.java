@@ -52,6 +52,9 @@ public class Usuario {
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TermoEncerramento> termosEncerramento;
     
+    @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    private UsuarioFoto foto;
+    
     public enum UserProfile {
         A, O, V
     }

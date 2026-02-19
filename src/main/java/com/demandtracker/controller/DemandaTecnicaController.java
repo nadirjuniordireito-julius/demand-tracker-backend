@@ -48,4 +48,15 @@ public class DemandaTecnicaController {
         demandaService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    // GET /api/demandas/projeto/{projetoId}/em-fluxo/paginado?page=0&size=10&sort=dataAbertura,desc
+    @GetMapping("/projeto/{projetoId}/em-fluxo/paginado")
+    public ResponseEntity<Page<DemandaTecnicaDTO>> findEmFluxoPorProjetoPaginado(
+            @PathVariable Long projetoId,
+            Pageable pageable) {
+
+        return ResponseEntity.ok(
+            demandaService.findDemandasEmFluxoPaginado(projetoId, pageable)
+        );
+    }
 }

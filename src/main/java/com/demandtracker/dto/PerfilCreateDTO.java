@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -28,4 +28,9 @@ public class PerfilCreateDTO {
     
     @NotNull(message = "ID do projeto é obrigatório")
     private Long projetoId;
+
+    @NotNull(message = "Valor é obrigatório")
+    private BigDecimal valor;   
+
 }
+

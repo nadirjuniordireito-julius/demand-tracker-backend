@@ -27,6 +27,8 @@ public class ProjetoCreateDTO {
     @NotNull(message = "Data final é obrigatória")
     private LocalDate termoFinal;
     
+    private LocalDate dataEfetivaInicio;
+    
     @NotNull(message = "ID do usuário é obrigatório")
     private Long usuarioId;
 }

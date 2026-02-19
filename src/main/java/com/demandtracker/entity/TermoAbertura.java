@@ -33,9 +33,4 @@ public class TermoAbertura {
     
     @Column
     private LocalDateTime dataAssinatura;
-    
-    @PrePersist
-    protected void onCreate() {
-        dataAbertura = LocalDateTime.now();
-    }
 }

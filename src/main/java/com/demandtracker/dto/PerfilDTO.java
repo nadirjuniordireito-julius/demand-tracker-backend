@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -17,6 +18,7 @@ public class PerfilDTO {
     private LocalDate termoInicial;
     private LocalDate termoFinal;
     private LocalDateTime dataUpdate;
+    private BigDecimal valor;
     private Long usuarioId;
     private UsuarioDTO usuario;
     private Long projetoId;
@@ -29,6 +31,7 @@ public class PerfilDTO {
         dto.setTermoInicial(perfil.getTermoInicial());
         dto.setTermoFinal(perfil.getTermoFinal());
         dto.setDataUpdate(perfil.getDataUpdate());
+        dto.setValor(perfil.getValor());
         if (perfil.getUsuario() != null) {
             dto.setUsuarioId(perfil.getUsuario().getId());
             dto.setUsuario(UsuarioDTO.fromEntity(perfil.getUsuario()));

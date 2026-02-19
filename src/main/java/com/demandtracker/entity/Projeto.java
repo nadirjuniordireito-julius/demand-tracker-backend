@@ -31,6 +31,9 @@ public class Projeto {
     @Column(nullable = false)
     private LocalDate termoFinal;
     
+    @Column(name = "data_efetiva_inicio", nullable = true)
+    private LocalDate dataEfetivaInicio;
+    
     @Column(nullable = false)
     private LocalDateTime dataUpdate;
     
@@ -43,6 +46,15 @@ public class Projeto {
     
     @OneToMany(mappedBy = "projeto", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Perfil> perfis;
+    
+    @OneToMany(mappedBy = "projeto", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TemplateDemanda> templatesDemanda;
+    
+    @OneToMany(mappedBy = "projeto", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjetoMeta> metas;
+    
+    @OneToMany(mappedBy = "projeto", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjetoDoc> documentos;
     
     @PrePersist
     @PreUpdate

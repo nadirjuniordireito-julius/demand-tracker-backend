@@ -2,10 +2,15 @@ package com.demandtracker.service;
 
 import com.demandtracker.dto.*;
 import com.demandtracker.entity.*;
+import com.demandtracker.exception.BadRequestException;
 import com.demandtracker.exception.ResourceNotFoundException;
 import com.demandtracker.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+
+import java.math.BigDecimal;
+import java.time.Year;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,11 +22,31 @@ public class DemandaTecnicaService {
     private final DemandaTecnicaRepository demandaRepository;
     private final ProjetoRepository projetoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final MetaProdutoRepository metaProdutoRepository;
+    private final TermoEncerramentoRepository termoEncerramentoRepository;
     
+    @Transactional(readOnly = true)
     public Page<DemandaTecnicaDTO> findAll(String codigo, String nome, Long projetoId, String status, Pageable pageable) {
         Page<DemandaTecnica> demandas;
+        String statusCode = (status != null && !status.isBlank()) ? mapStatusToCode(status) : null;
         
-        if (codigo != null && nome != null && projetoId != null) {
+        if (statusCode != null && codigo == null && nome == null && projetoId == null) {
+            demandas = demandaRepository.findByStatus(statusCode, pageable);
+        } else if (statusCode != null && codigo != null && nome != null && projetoId != null) {
+            demandas = demandaRepository.findByCodigoContainingIgnoreCaseAndNomeContainingIgnoreCaseAndProjetoIdAndStatus(codigo, nome, projetoId, statusCode, pageable);
+        } else if (statusCode != null && codigo != null && nome != null) {
+            demandas = demandaRepository.findByCodigoContainingIgnoreCaseAndNomeContainingIgnoreCaseAndStatus(codigo, nome, statusCode, pageable);
+        } else if (statusCode != null && codigo != null && projetoId != null) {
+            demandas = demandaRepository.findByCodigoContainingIgnoreCaseAndProjetoIdAndStatus(codigo, projetoId, statusCode, pageable);
+        } else if (statusCode != null && nome != null && projetoId != null) {
+            demandas = demandaRepository.findByNomeContainingIgnoreCaseAndProjetoIdAndStatus(nome, projetoId, statusCode, pageable);
+        } else if (statusCode != null && codigo != null) {
+            demandas = demandaRepository.findByCodigoContainingIgnoreCaseAndStatus(codigo, statusCode, pageable);
+        } else if (statusCode != null && nome != null) {
+            demandas = demandaRepository.findByNomeContainingIgnoreCaseAndStatus(nome, statusCode, pageable);
+        } else if (statusCode != null && projetoId != null) {
+            demandas = demandaRepository.findByProjetoIdAndStatus(projetoId, statusCode, pageable);
+        } else if (codigo != null && nome != null && projetoId != null) {
             demandas = demandaRepository.findByCodigoContainingIgnoreCaseAndNomeContainingIgnoreCaseAndProjetoId(codigo, nome, projetoId, pageable);
         } else if (codigo != null && nome != null) {
             demandas = demandaRepository.findByCodigoContainingIgnoreCaseAndNomeContainingIgnoreCase(codigo, nome, pageable);
@@ -42,10 +67,17 @@ public class DemandaTecnicaService {
         return demandas.map(DemandaTecnicaDTO::fromEntity);
     }
     
+    @Transactional(readOnly = true)
     public DemandaTecnicaDTO findById(Long id) {
-        DemandaTecnica demanda = demandaRepository.findById(id)
+        DemandaTecnica demanda = demandaRepository.findByIdWithMeta(id)
             .orElseThrow(() -> new ResourceNotFoundException("Demanda não encontrada com ID: " + id));
-        return DemandaTecnicaDTO.fromEntity(demanda);
+        DemandaTecnicaDTO dto = DemandaTecnicaDTO.fromEntity(demanda);
+        if (demanda.getMetaProduto() != null) {
+            BigDecimal total = termoEncerramentoRepository.sumValorExecutadoByMetaProdutoIdAndStatus(
+                demanda.getMetaProduto().getId(), DemandaTecnica.STATUS_ENCERRADA);
+            dto.setTotalExecutadoProduto(total != null ? total : BigDecimal.ZERO);
+        }
+        return dto;
     }
     
     @Transactional
@@ -55,16 +87,33 @@ public class DemandaTecnicaService {
         
         Usuario usuario = usuarioRepository.findById(dto.getUsuarioId())
             .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com ID: " + dto.getUsuarioId()));
-        
-        if (demandaRepository.findByCodigo(dto.getCodigo()).isPresent()) {
-            throw new RuntimeException("Código já existe: " + dto.getCodigo());
+
+        if (dto.getMetaProdutoId() == null) {
+            throw new BadRequestException("Para geração automática do código, informe o produto da meta (metaProdutoId).");
         }
-        
+
+        MetaProduto metaProduto = metaProdutoRepository.findById(dto.getMetaProdutoId())
+            .orElseThrow(() -> new ResourceNotFoundException("Meta produto não encontrado com ID: " + dto.getMetaProdutoId()));
+
+        int anoAbertura = Year.now().getValue();
+        String codigoGerado = gerarCodigoDemandaTecnica(metaProduto.getProjetoMeta(), anoAbertura);
+        if (demandaRepository.findByCodigo(codigoGerado).isPresent()) {
+            throw new RuntimeException("Código gerado já existe: " + codigoGerado + ". Tente novamente.");
+        }
+
         DemandaTecnica demanda = new DemandaTecnica();
         demanda.setProjeto(projeto);
-        demanda.setCodigo(dto.getCodigo());
+        demanda.setCodigo(codigoGerado);
         demanda.setNome(dto.getNome());
+        demanda.setDescricao(dto.getDescricao());
         demanda.setUsuario(usuario);
+        demanda.setMetaProduto(metaProduto);
+        
+        if (dto.getStatus() != null && !dto.getStatus().isBlank()) {
+            demanda.setStatus(mapStatusToCode(dto.getStatus()));
+        } else {
+            demanda.setStatus("A"); // Em elaboração - status inicial ao criar demanda
+        }
         
         DemandaTecnica saved = demandaRepository.save(demanda);
         return DemandaTecnicaDTO.fromEntity(saved);
@@ -80,15 +129,55 @@ public class DemandaTecnicaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Projeto não encontrado com ID: " + dto.getProjetoId()));
             demanda.setProjeto(projeto);
         }
-        if (dto.getCodigo() != null) {
-            demanda.setCodigo(dto.getCodigo());
-        }
+        // Código não é alterável no update (gerado automaticamente na criação).
         if (dto.getNome() != null) {
             demanda.setNome(dto.getNome());
+        }
+        if (dto.getDescricao() != null) {
+            demanda.setDescricao(dto.getDescricao());
+        }
+        if (dto.getMetaProdutoId() != null) {
+            MetaProduto metaProduto = metaProdutoRepository.findById(dto.getMetaProdutoId())
+                .orElseThrow(() -> new ResourceNotFoundException("Meta produto não encontrado com ID: " + dto.getMetaProdutoId()));
+            demanda.setMetaProduto(metaProduto);
+        }
+        // Se metaProdutoId for null, mantém o valor atual (não remove o relacionamento)
+        
+        if (dto.getStatus() != null) {
+            demanda.setStatus(dto.getStatus().isBlank() ? null : mapStatusToCode(dto.getStatus()));
         }
         
         DemandaTecnica saved = demandaRepository.save(demanda);
         return DemandaTecnicaDTO.fromEntity(saved);
+    }
+    
+    /**
+     * Gera código automático da demanda técnica: DT-M{codigoMeta3}-{sequencia3}-{ano4}.
+     * (i) Prefixo DT-M; (ii) código da meta com zeros à esquerda (máx 3 caracteres);
+     * (iii) hífen + sequência (3 dígitos) + hífen + ano (4 dígitos) da abertura.
+     */
+    private String gerarCodigoDemandaTecnica(ProjetoMeta projetoMeta, int ano) {
+        String codigoMeta = projetoMeta.getCodigo() != null ? projetoMeta.getCodigo().trim() : "0";
+        if (codigoMeta.length() > 3) {
+            codigoMeta = codigoMeta.substring(codigoMeta.length() - 3);
+        }
+        codigoMeta = String.format("%3s", codigoMeta).replace(' ', '0');
+
+        long count = demandaRepository.countByMetaProdutoProjetoMetaId(projetoMeta.getId());
+        int proximaSequencia = (int) count + 1;
+        String seq = String.format("%03d", proximaSequencia);
+        String anoStr = String.format("%04d", ano);
+
+        return "DT-M" + codigoMeta + "-" + seq + "-" + anoStr;
+    }
+
+    private static String mapStatusToCode(String status) {
+        if (status == null || status.isBlank()) return null;
+        String s = status.trim().toLowerCase();
+        if (s.length() == 1) return s.toUpperCase();
+        return switch (s) {
+            default -> status.substring(0, 1).toUpperCase();
+        };
     }
     
     @Transactional
@@ -98,4 +187,19 @@ public class DemandaTecnicaService {
         }
         demandaRepository.deleteById(id);
     }
+
+    @Transactional(readOnly = true)
+    public Page<DemandaTecnicaDTO> findDemandasEmFluxoPaginado(
+            Long projetoId,
+            Pageable pageable) {
+
+        if (projetoId == null) {
+            throw new BadRequestException("projetoId é obrigatório.");
+        }
+
+        return demandaRepository
+            .findByProjetoIdAndStatusEmFluxo(projetoId, pageable)
+            .map(DemandaTecnicaDTO::fromEntity);
+    }
+
 }

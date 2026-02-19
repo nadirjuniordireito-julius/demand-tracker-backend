@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -15,6 +16,7 @@ public class DemandaTecnicaDTO {
     private Long projetoId;
     private String codigo;
     private String nome;
+    private String descricao; // Campo opcional para descrição formatada (HTML)
     private LocalDateTime dataAbertura;
     private Long usuarioId;
     private ProjetoDTO projeto;
@@ -22,14 +24,20 @@ public class DemandaTecnicaDTO {
     private TermoAberturaDTO termoAbertura;
     private TermoPlanejamentoDTO termoPlanejamento;
     private TermoEncerramentoDTO termoEncerramento;
+    private Long metaProdutoId;
+    private MetaProdutoDTO metaProduto;
+    /** Valor total executado do produto: somatória dos custos realizados de todas as demandas encerradas (status G) do produto vinculado a esta demanda. */
+    private BigDecimal totalExecutadoProduto;
     private String status;
-    
+    private Boolean avaliacaoDisponivel;
+
     public static DemandaTecnicaDTO fromEntity(DemandaTecnica demanda) {
         DemandaTecnicaDTO dto = new DemandaTecnicaDTO();
         dto.setId(demanda.getId());
         dto.setProjetoId(demanda.getProjeto().getId());
         dto.setCodigo(demanda.getCodigo());
         dto.setNome(demanda.getNome());
+        dto.setDescricao(demanda.getDescricao());
         dto.setDataAbertura(demanda.getDataAbertura());
         dto.setUsuarioId(demanda.getUsuario().getId());
         
@@ -48,18 +56,14 @@ public class DemandaTecnicaDTO {
         if (demanda.getTermoEncerramento() != null) {
             dto.setTermoEncerramento(TermoEncerramentoDTO.fromEntity(demanda.getTermoEncerramento()));
         }
-        
-        // Calcula status
-        if (demanda.getTermoEncerramento() != null && demanda.getTermoEncerramento().getDataAssinatura() != null) {
-            dto.setStatus("closed");
-        } else if (demanda.getTermoPlanejamento() != null && demanda.getTermoPlanejamento().getDataAssinatura() != null) {
-            dto.setStatus("inExecution");
-        } else if (demanda.getTermoAbertura() != null && demanda.getTermoAbertura().getDataAssinatura() != null) {
-            dto.setStatus("inPlanning");
-        } else {
-            dto.setStatus("opened");
+        if (demanda.getMetaProduto() != null) {
+            dto.setMetaProdutoId(demanda.getMetaProduto().getId());
+            dto.setMetaProduto(MetaProdutoDTO.fromEntity(demanda.getMetaProduto(), true));
         }
         
+        dto.setStatus(demanda.getStatus());
+        dto.setAvaliacaoDisponivel(Boolean.TRUE.equals(demanda.getAvaliacaoDisponivel()));
+
         return dto;
     }
 }
