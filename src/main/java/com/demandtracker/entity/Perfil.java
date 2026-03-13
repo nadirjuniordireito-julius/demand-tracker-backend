@@ -44,10 +44,10 @@ public class Perfil {
     @JoinColumn(name = "projeto_id", nullable = false)
     private Projeto projeto;
     
-    @OneToMany(mappedBy = "perfil", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "perfil", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<TermoPlanejamentoCusto> custosPlanejamento;
     
-    @OneToMany(mappedBy = "perfil", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "perfil", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<TermoEncerramentoCusto> custosEncerramento;
     
     @PrePersist

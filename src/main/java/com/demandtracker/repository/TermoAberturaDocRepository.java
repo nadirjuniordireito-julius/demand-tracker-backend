@@ -8,19 +8,13 @@ import java.util.Optional;
 
 @Repository
 public interface TermoAberturaDocRepository extends JpaRepository<TermoAberturaDoc, Long> {
-    
-    /**
-     * Busca documento pelo ID do TermoAbertura
-     */
+
+    /** Busca documento pelo ID do TermoAbertura. */
     Optional<TermoAberturaDoc> findByTermoAberturaId(Long termoAberturaId);
-    
-    /**
-     * Verifica se existe documento para um TermoAbertura
-     */
+
+    /** Verifica se existe documento para um TermoAbertura. */
     boolean existsByTermoAberturaId(Long termoAberturaId);
-    
-    /**
-     * Remove documento pelo ID do TermoAbertura
-     */
+
+    /** Remove documento pelo ID do TermoAbertura. */
     void deleteByTermoAberturaId(Long termoAberturaId);
 }

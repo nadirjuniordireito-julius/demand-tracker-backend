@@ -20,6 +20,7 @@ import com.demandtracker.entity.DemandaTecnica;
 public class TermoPlanejamentoService {
     
     private final TermoPlanejamentoRepository termoRepository;
+    private final TermoPlanejamentoCustoRepository termoPlanejamentoCustoRepository;
     private final DemandaTecnicaRepository demandaRepository;
     private final UsuarioRepository usuarioRepository;
     private final PerfilRepository perfilRepository;
@@ -124,18 +125,20 @@ public class TermoPlanejamentoService {
         }
         
         if (dto.getCustos() != null) {
-            termo.getCustos().clear();
+            termoPlanejamentoCustoRepository.deleteByTermoPlanejamentoId(id);
+            termoPlanejamentoCustoRepository.flush();
+            List<TermoPlanejamentoCusto> novosCustos = new ArrayList<>();
             for (TermoPlanejamentoCustoCreateDTO custoDTO : dto.getCustos()) {
                 Perfil perfil = perfilRepository.findById(custoDTO.getPerfilId())
                     .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado com ID: " + custoDTO.getPerfilId()));
-                
                 TermoPlanejamentoCusto custo = new TermoPlanejamentoCusto();
                 custo.setTermoPlanejamento(termo);
                 custo.setPerfil(perfil);
                 custo.setQtdeHora(custoDTO.getQtdeHora());
                 custo.setValorHora(custoDTO.getValorHora());
-                termo.getCustos().add(custo);
+                novosCustos.add(termoPlanejamentoCustoRepository.save(custo));
             }
+            termo.setCustos(novosCustos);
         }
         
         TermoPlanejamento saved = termoRepository.save(termo);

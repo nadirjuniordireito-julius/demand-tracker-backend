@@ -2,6 +2,7 @@ package com.demandtracker.dto;
 
 import com.demandtracker.entity.enums.SemaforoNivel;
 import com.demandtracker.entity.enums.SemaforoStatus;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,6 +27,10 @@ public class SemaforoNodeDTO {
     private String nome;
 
     private SemaforoStatus status;
+
+    /** Código do status da demanda técnica (A,B,C,D,E,F,G,Z). Preenchido apenas quando nivel = DEMANDA. */
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    private String statusDemanda;
 
     private LocalDate dataInicio;
     private LocalDate dataFim;

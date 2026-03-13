@@ -26,12 +26,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.demandtracker.repository.DesembolsoRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +42,8 @@ public class ProjetoService {
     private final TermoEncerramentoRepository termoEncerramentoRepository;
     private final ProjetoMetaRepository projetoMetaRepository;
     private final DemandaTecnicaRepository demandaTecnicaRepository;
-    
+    private final DesembolsoRepository desembolsoRepository;
+
     public Page<ProjetoDTO> findAll(String nome, String codTed, Long usuarioId, Pageable pageable) {
         Page<Projeto> projetos;
         
@@ -78,10 +77,13 @@ public class ProjetoService {
         if (!projetoRepository.existsById(projetoId)) {
             throw new ResourceNotFoundException("Projeto não encontrado com ID: " + projetoId);
         }
+        
         BigDecimal valorTotalProjeto = metaProdutoRepository.sumValorTotalByProjetoId(projetoId);
         if (valorTotalProjeto == null) {
             valorTotalProjeto = BigDecimal.ZERO;
         }
+        
+       
         BigDecimal valorTotalExecutado = termoEncerramentoCustoRepository.sumCustosByProjetoId(projetoId);
         if (valorTotalExecutado == null) {
             valorTotalExecutado = BigDecimal.ZERO;
@@ -336,14 +338,16 @@ public class ProjetoService {
             node.setPercentualExecutado(BigDecimal.valueOf(produto.getPercExecutado()).setScale(2));
         }
 
-        long qtdDemandas = demandaTecnicaRepository.countByMetaProdutoId(produto.getId());
+        // Não considerar demandas canceladas (status Z) no semáforo
+        final String statusCancelada = "Z";
+        long qtdDemandas = demandaTecnicaRepository.countByMetaProdutoIdAndStatusNot(produto.getId(), statusCancelada);
         long qtdDemandasEncerradas = demandaTecnicaRepository.countByMetaProdutoIdAndStatus(produto.getId(), com.demandtracker.entity.DemandaTecnica.STATUS_ENCERRADA);
         node.setQtdDemandas((int) qtdDemandas);
         node.setQtdDemandasEncerradas((int) qtdDemandasEncerradas);
 
         node.setStatus(calcularStatusProduto(produto));
 
-        List<DemandaTecnica> demandas = demandaTecnicaRepository.findByMetaProdutoId(produto.getId());
+        List<DemandaTecnica> demandas = demandaTecnicaRepository.findByMetaProdutoIdAndStatusNot(produto.getId(), statusCancelada);
         BigDecimal valorTotalPrevistoProduto = node.getValorTotalPrevisto() != null ? node.getValorTotalPrevisto() : BigDecimal.ZERO;
         for (DemandaTecnica demanda : demandas) {
             node.getChildren().add(buildDemandaNode(demanda, valorTotalPrevistoProduto));
@@ -359,12 +363,14 @@ public class ProjetoService {
      * @return
      */
     private SemaforoNodeDTO buildDemandaNode(DemandaTecnica demanda, BigDecimal valorTotalPrevistoProduto) {
+        String statusDemanda = demanda.getStatus() != null ? demanda.getStatus() : "";
         SemaforoNodeDTO node = new SemaforoNodeDTO();
         node.setId(demanda.getId());
         node.setNivel(SemaforoNivel.DEMANDA);
         node.setCodigo(demanda.getCodigo());
         node.setNome(demanda.getNome());
-        node.setStatus(mapStatusDemandaToSemaforo(demanda.getStatus()));
+        node.setStatus(mapStatusDemandaToSemaforo(statusDemanda));
+        node.setStatusDemanda(statusDemanda);
         node.setChildren(List.of());
 
         BigDecimal valorExecutadoDemanda = termoEncerramentoRepository.sumValorExecutadoByDemandaTecnicaId(demanda.getId());

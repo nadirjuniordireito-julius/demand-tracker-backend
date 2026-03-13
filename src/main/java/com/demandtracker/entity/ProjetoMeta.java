@@ -33,6 +33,6 @@ public class ProjetoMeta {
     @Column(nullable = false, length = 1)
     private String status;
     
-    @OneToMany(mappedBy = "projetoMeta", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "projetoMeta", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<MetaProduto> produtos;
 }

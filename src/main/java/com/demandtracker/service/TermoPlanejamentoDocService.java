@@ -20,16 +20,7 @@ import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletRequest;
 import com.demandtracker.entity.Usuario;
 import com.demandtracker.repository.UsuarioRepository;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.graphics.color.PDColor;
-import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.util.Matrix;
-import java.io.ByteArrayOutputStream;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import com.demandtracker.service.TermoPlanejamentoService;
+import com.demandtracker.service.DocumentoService;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +30,7 @@ public class TermoPlanejamentoDocService {
     private final TermoPlanejamentoRepository termoPlanejamentoRepository;
     private final UsuarioRepository usuarioRepository;
     private final TermoPlanejamentoService termoPlanejamentoService;
-
+    private final DocumentoService documentoService;
     /**
      * Cria um novo documento para um Termo de Planejamento
      */
@@ -194,95 +185,37 @@ public class TermoPlanejamentoDocService {
 
 
     @Transactional
-    public void assinar(Long documentoId, String hashPdf, Long usuarioId, HttpServletRequest request) {
-       Usuario usuario = usuarioRepository.findById(usuarioId)
+    public void assinar(Long documentoId, String hashPdf, Long usuarioId, Long paginanumber, Float x, Float y, Long width, Long height, HttpServletRequest request) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + usuarioId));
-       
-       TermoPlanejamentoDoc doc = repository.findById(documentoId)
+
+        TermoPlanejamentoDoc doc = repository.findById(documentoId)
                 .orElseThrow(() -> new RuntimeException("Documento não encontrado com ID: " + documentoId));
-       
+
         LocalDateTime dataAssinatura = LocalDateTime.now();
         doc.setHashPdf(hashPdf);
-        doc.setIp( request.getRemoteAddr() );
-        doc.setUserAgent( request.getHeader("User-Agent") );
+        doc.setIp(request.getRemoteAddr());
+        doc.setUserAgent(request.getHeader("User-Agent"));
         doc.setDataAssinatura(dataAssinatura);
         doc.setUsuarioSignaturer(usuario);
 
-        // carimbar o PDF
+        // carimbar o PDF (página 0-based; frontend pode enviar pageNumber 1-based)
         byte[] pdf = doc.getArquivoPdf();
-        byte[] newPdf = null;
+        // Long pagina = (page != null && page > 0) ? page - 1 : 0L;
         try {
-            newPdf = carimbarAssinatura(pdf, usuario.getNome(), hashPdf, doc.getIp(), dataAssinatura );
+            byte[] newPdf = documentoService.carimbarAssinatura(
+                    pdf, usuario.getNome(), hashPdf, doc.getIp(), dataAssinatura,
+                    paginanumber, x, y, width, height);
             doc.setArquivoPdf(newPdf);
         } catch (Exception e) {
-           
+            throw new RuntimeException("Erro ao carimbar assinatura no PDF: " + e.getMessage(), e);
         }
-        
+
         repository.save(doc);
 
         // Encerrar a demanda
         termoPlanejamentoService.sign(doc.getTermoPlanejamento().getId());
-
-
     }
 
-  
-    private byte[] carimbarAssinatura(
-        byte[] pdfOriginal,
-        String usuario,
-        String hash,
-        String ip, 
-        LocalDateTime dataAssinatura
-    ) throws IOException {
-
-        PDDocument document = PDDocument.load(pdfOriginal);
-
-        for (PDPage page : document.getPages()) {
-    
-            PDRectangle box = page.getMediaBox();
-            float pageWidth = box.getWidth();
-            float pageHeight = box.getHeight();
-    
-            // Posição: lado direito, próximo ao rodapé
-            float baseX = pageWidth - 20; // margem direita
-            float baseY = 80;             // sobe a partir do footer
-    
-            try (PDPageContentStream cs = new PDPageContentStream(
-                    document,
-                    page,
-                    PDPageContentStream.AppendMode.APPEND,
-                    true,
-                    true
-            )) {
-    
-                cs.saveGraphicsState();
-    
-                // Rotaciona 90° para subir verticalmente (sem espelhar)
-                cs.transform(new Matrix(
-                        0, 1,   // a, b
-                        -1, 0,  // c, d
-                        baseX, baseY
-                ));
-    
-                cs.beginText();
-                cs.setFont(PDType1Font.HELVETICA, 9);
-                cs.setNonStrokingColor(120, 120, 120);
-    
-                cs.newLineAtOffset(0, 0);
-                cs.showText("ASSINADO ELETRONICAMENTE por " + usuario + " em " + dataAssinatura);
-                cs.newLineAtOffset(0, -12);
-                cs.showText("Hash: " + hash+" - IP: " + ip);
-    
-                cs.endText();
-                cs.restoreGraphicsState();
-            }
-        }
-    
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        document.save(out);
-        document.close();
-        return out.toByteArray();
-        
-    }
 }
 

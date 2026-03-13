@@ -5,14 +5,18 @@ import com.demandtracker.repository.*;
 import fr.opensagres.poi.xwpf.converter.pdf.PdfConverter;
 import fr.opensagres.poi.xwpf.converter.pdf.PdfOptions;
 import lombok.RequiredArgsConstructor;
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.apache.xmlbeans.XmlCursor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -2618,6 +2622,158 @@ public class DocumentoService {
         BigDecimal qtdeHora;
         BigDecimal valorHora;
         BigDecimal total;
+    }
+
+    /**
+     * Carimba o PDF com os dados da assinatura digital na posição (x, y) da página.
+     * Layout (fonte pequena estilo gov.br): (i) Assinado Digitalmente; (ii) usuário em negrito;
+     * (iii) dataAssinatura; (iv) hash.
+     */
+    public byte[] carimbarAssinatura(
+        byte[] pdfOriginal,
+        String usuario,
+        String hash,
+        String ip,
+        LocalDateTime dataAssinatura,
+        Long pagina,
+        Float x,
+        Float y,
+        Long width,
+        Long height
+    ) throws IOException {
+
+        PDDocument document = PDDocument.load(pdfOriginal);
+        int numberOfPages = document.getNumberOfPages();
+
+        int pageIndex = (pagina != null && pagina >= 0) ? pagina.intValue() : 0;
+        if (pageIndex < 0) {
+            pageIndex = 0;
+        } else if (pageIndex >= numberOfPages) {
+            // Se vier uma página maior que o total, usamos a última página válida
+            pageIndex = numberOfPages - 1;
+        }
+
+        PDPage page = document.getPage(pageIndex);
+        PDRectangle mediaBox = page.getMediaBox();
+        float pageWidth = mediaBox.getWidth();
+        float pageHeight = mediaBox.getHeight();
+
+        // Agora assumimos que x e y JÁ estão em coordenadas de PDF:
+        // - origem no canto INFERIOR esquerdo
+        // - unidade em pontos (1/72 in)
+        float baseX = (x != null ? x.floatValue() : 50f);
+        float baseY = (y != null ? y.floatValue() : 50f);
+
+        // Apenas garante que o conteúdo não saia completamente fora da página.
+        if (baseX < 0) baseX = 0;
+        if (baseY < 0) baseY = 0;
+        if (baseX > pageWidth) baseX = pageWidth;
+        if (baseY > pageHeight) baseY = pageHeight;
+
+        // Dimensões do bloco de texto.
+        float fontSize = 5f;
+        float lineHeight = 6f; // linhas mais próximas, combinando com fonte menor
+        float textBlockHeight = lineHeight * 4; // 4 linhas
+        float textBlockWidth = 160f;
+        // Gap horizontal entre imagem e texto (menor, para aproximar mais).
+        float gap = 2f;
+
+        // Coordenadas iniciais do texto (caso a imagem não carregue, usamos o próprio baseX/baseY).
+        float textX = baseX;
+        float textY = baseY;
+
+        java.awt.Color textColor = java.awt.Color.BLACK;
+
+        String dataFormatada = dataAssinatura != null
+                ? dataAssinatura.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                : "";
+
+        try (PDPageContentStream cs = new PDPageContentStream(
+                document,
+                page,
+                PDPageContentStream.AppendMode.APPEND,
+                true,
+                true
+        )) {
+            // Desenha a imagem (carregada de recursos do classpath) e calcula posição do texto.
+            try {
+                // Coloque o arquivo em: src/main/resources/static/img/assinatura-julius.png
+                PDImageXObject image = PDImageXObject.createFromByteArray(
+                        document,
+                        this.getClass().getResourceAsStream("/static/img/assinatura-julius.png").readAllBytes(),
+                        "assinatura-julius"
+                );
+
+                // Mantém o aspecto original da imagem.
+                float origW = image.getWidth();
+                float origH = image.getHeight();
+                // Altura levemente maior que o bloco de texto (4 linhas) para aproximar do visual anterior (~30pt).
+                float imageHeight = textBlockHeight + lineHeight;
+                float imageWidth = (origW / origH) * imageHeight;
+
+                // Imagem ancorada próxima de baseX/baseY, com leve ajuste para baixo e para a direita.
+                float imageX = baseX + 4f;   // ligeiro deslocamento para a direita
+                float imageY = baseY - 2f;   // ligeiro deslocamento para baixo
+
+                // Texto à direita da imagem, centralizado verticalmente em relação a ela.
+                textX = imageX + imageWidth + gap;
+                textY = imageY + (imageHeight / 2f) + (textBlockHeight / 2f) - lineHeight;
+
+                // Se o texto extrapolar a largura da página, desloca o conjunto um pouco para a esquerda.
+                if (textX + textBlockWidth > pageWidth) {
+                    float overflow = (textX + textBlockWidth) - pageWidth;
+                    textX -= overflow;
+                    imageX -= overflow;
+                    if (imageX < 0) {
+                        // Garante que a imagem não vá para fora; reancora e recalc textX.
+                        imageX = 0;
+                        textX = imageX + imageWidth + gap;
+                    }
+                }
+
+                cs.drawImage(image, imageX, imageY, imageWidth, imageHeight);
+            } catch (Exception e) {
+                // Se a imagem não existir ou falhar, seguimos apenas com o texto usando baseX/baseY.
+                textX = baseX;
+                textY = baseY + textBlockHeight; // bloco logo acima do ponto base
+            }
+
+            // Desenha o bloco de texto ao lado da imagem (ou sozinho, caso a imagem falhe).
+            cs.saveGraphicsState();
+            cs.beginText();
+
+            // 1) "Assinado Digitalmente" em itálico
+            cs.setFont(PDType1Font.HELVETICA_OBLIQUE, fontSize);
+            cs.setNonStrokingColor(textColor);
+            cs.newLineAtOffset(textX, textY);
+            cs.showText("Assinado Digitalmente");
+            cs.newLineAtOffset(0, -lineHeight);
+
+            // 2) Usuário em negrito e cor navy
+            cs.setFont(PDType1Font.HELVETICA_BOLD, fontSize);
+            cs.setNonStrokingColor(new java.awt.Color(0, 0, 128)); // navy
+            cs.showText(usuario != null ? usuario : "");
+
+            // 3) Data + IP em regular
+            cs.setFont(PDType1Font.HELVETICA, fontSize);
+            cs.setNonStrokingColor(textColor);
+            cs.newLineAtOffset(0, -lineHeight);
+            cs.showText(dataFormatada + "-" + ip);
+
+            // 4) Hash em itálico
+            cs.newLineAtOffset(0, -lineHeight);
+            cs.setFont(PDType1Font.HELVETICA_OBLIQUE, fontSize);
+            cs.setNonStrokingColor(textColor);
+            cs.showText(hash != null ? hash : "");
+
+            cs.endText();
+            cs.restoreGraphicsState();
+        }
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        document.save(out);
+        document.close();
+        return out.toByteArray();
     }
 
     /**

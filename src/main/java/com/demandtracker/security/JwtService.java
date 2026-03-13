@@ -63,7 +63,8 @@ public class JwtService {
     // ===============================
 
     public String generateAccessToken(UserDetails userDetails) {
-        return generateToken(userDetails, 15 * 60 * 1000L); // 15 minutos
+        // 60 minutos
+        return generateToken(userDetails, 60 * 60 * 1000L);
     }
 
     private String generateToken(UserDetails userDetails, Long expirationMillis) {

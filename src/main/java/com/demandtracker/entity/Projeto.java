@@ -41,19 +41,19 @@ public class Projeto {
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
     
-    @OneToMany(mappedBy = "projeto", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "projeto", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<DemandaTecnica> demandas;
     
-    @OneToMany(mappedBy = "projeto", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "projeto", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<Perfil> perfis;
     
-    @OneToMany(mappedBy = "projeto", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "projeto", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<TemplateDemanda> templatesDemanda;
     
-    @OneToMany(mappedBy = "projeto", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "projeto", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<ProjetoMeta> metas;
     
-    @OneToMany(mappedBy = "projeto", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "projeto", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<ProjetoDoc> documentos;
     
     @PrePersist

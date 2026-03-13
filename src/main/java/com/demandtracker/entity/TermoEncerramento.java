@@ -45,6 +45,9 @@ public class TermoEncerramento {
     @Column(name = "data_fim_execucao", nullable = true)
     private LocalDate dataFimExecucao;
     
-    @OneToMany(mappedBy = "termoEncerramento", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "termoEncerramento", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<TermoEncerramentoCusto> custos;
+
+    @OneToMany(mappedBy = "termoEncerramento", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<TermoEncerramentoAnexo> anexos;
 }

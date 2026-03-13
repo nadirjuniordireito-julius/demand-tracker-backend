@@ -39,9 +39,18 @@ public interface DemandaTecnicaRepository extends JpaRepository<DemandaTecnica, 
 
     List<DemandaTecnica> findByMetaProdutoId(Long metaProdutoId);
 
+    /** Demandas do produto excluindo as canceladas (status Z). Para semáforo. */
+    List<DemandaTecnica> findByMetaProdutoIdAndStatusNot(Long metaProdutoId, String status);
+
     long countByMetaProdutoId(Long metaProdutoId);
+
+    /** Conta demandas do produto excluindo as canceladas (status Z). Para semáforo. */
+    long countByMetaProdutoIdAndStatusNot(Long metaProdutoId, String status);
     /** Quantidade de demandas cujo produto pertence à meta (projetoMeta). Usado para sequência do código automático. */
     long countByMetaProdutoProjetoMetaId(Long projetoMetaId);
+
+    /** Última demanda (maior código) para a meta (projetoMeta) informada. Usado para descobrir a próxima sequência do código automático. */
+    Optional<DemandaTecnica> findFirstByMetaProdutoProjetoMetaIdOrderByCodigoDesc(Long projetoMetaId);
 
     long countByMetaProdutoIdAndStatus(Long metaProdutoId, String status);
 

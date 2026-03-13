@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.HttpHeaders;
@@ -23,7 +22,6 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final PasswordEncoder passwordEncoder;
     private final HttpServletResponse response;
 
     public AuthResponse login(LoginRequest request) {

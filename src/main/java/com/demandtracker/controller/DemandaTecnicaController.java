@@ -2,6 +2,7 @@ package com.demandtracker.controller;
 
 import com.demandtracker.dto.*;
 import com.demandtracker.service.DemandaTecnicaService;
+import com.demandtracker.service.DemandaTecnicaTimelineService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -10,12 +11,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/demandas")
 @RequiredArgsConstructor
 public class DemandaTecnicaController {
-    
+
     private final DemandaTecnicaService demandaService;
+    private final DemandaTecnicaTimelineService timelineService;
     
     @GetMapping
     public ResponseEntity<Page<DemandaTecnicaDTO>> findAll(
@@ -32,6 +36,15 @@ public class DemandaTecnicaController {
     public ResponseEntity<DemandaTecnicaDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(demandaService.findById(id));
     }
+
+    /**
+     * Timeline do rastro da demanda técnica (criação, abertura, assinaturas, planejamento, encerramento).
+     * GET /api/demandas/{id}/timeline
+     */
+    @GetMapping("/{id}/timeline")
+    public ResponseEntity<List<DemandaTecnicaTimelineItemDTO>> getTimeline(@PathVariable Long id) {
+        return ResponseEntity.ok(timelineService.getTimelineByDemandaId(id));
+    }
     
     @PostMapping
     public ResponseEntity<DemandaTecnicaDTO> create(@Valid @RequestBody DemandaTecnicaCreateDTO dto) {
@@ -47,6 +60,15 @@ public class DemandaTecnicaController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         demandaService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Cancela uma demanda técnica (define status = "Z" - Cancelada).
+     * PUT /api/demandas/{id}/cancelar
+     */
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<DemandaTecnicaDTO> cancelar(@PathVariable Long id) {
+        return ResponseEntity.ok(demandaService.cancelar(id));
     }
 
     // GET /api/demandas/projeto/{projetoId}/em-fluxo/paginado?page=0&size=10&sort=dataAbertura,desc

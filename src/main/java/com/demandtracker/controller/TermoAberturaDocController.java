@@ -149,13 +149,48 @@ public class TermoAberturaDocController {
         return ResponseEntity.ok(exists);
     }
 
-    @PutMapping("/termo/{documentoId}/assinar")
+    /**
+     * Assina o documento do termo de abertura.
+     * Path usa o ID do documento (TermoAberturaDoc), enviado pelo frontend.
+     * Parâmetros: hashPdf, usuarioId, pageNumber (ou page), x, y, width, height.
+     */
+    @PutMapping("/{id}/assinar")
     public ResponseEntity<Void> assinar(
-        @PathVariable Long documentoId, 
-        @RequestParam String hashPdf, 
+        @PathVariable Long id,
+        @RequestParam String hashPdf,
         @RequestParam Long usuarioId,
+        @RequestParam(value = "pageNumber", required = false) Long pageNumber,
+        @RequestParam(value = "page", required = false) Long page,
+        @RequestParam(value = "x", required = false) Float x,
+        @RequestParam(value = "y", required = false) Float y,
+        @RequestParam(value = "width", required = false) Long width,
+        @RequestParam(value = "height", required = false) Long height,
         HttpServletRequest request) {
-        service.assinar(documentoId, hashPdf, usuarioId, request);
+        Long pageParam = pageNumber != null ? pageNumber : page;
+        service.assinar(id, hashPdf, usuarioId, pageParam, x, y, width, height, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Assina o documento do termo de abertura (rota legada).
+     * Aceita ID do Termo de Abertura (termoAberturaId); o documento é resolvido internamente.
+     * Preferir PUT /{id}/assinar com o ID do documento (TermoAberturaDoc).
+     */
+    @PutMapping("/termo/{id}/assinar")
+    public ResponseEntity<Void> assinarByTermoAberturaId(
+        @PathVariable Long id,
+        @RequestParam String hashPdf,
+        @RequestParam Long usuarioId,
+        @RequestParam(value = "pageNumber", required = false) Long pageNumber,
+        @RequestParam(value = "page", required = false) Long page,
+        @RequestParam(value = "x", required = false) Float x,
+        @RequestParam(value = "y", required = false) Float y,
+        @RequestParam(value = "width", required = false) Long width,
+        @RequestParam(value = "height", required = false) Long height,
+        HttpServletRequest request) {
+        // TermoAberturaDocResponseDTO doc = service.findById(id);
+        Long pageParam = pageNumber != null ? pageNumber : page;
+        service.assinar(id, hashPdf, usuarioId, pageParam, x, y, width, height, request);
         return ResponseEntity.noContent().build();
     }
 

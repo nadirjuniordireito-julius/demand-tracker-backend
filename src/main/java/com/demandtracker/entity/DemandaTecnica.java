@@ -40,13 +40,13 @@ public class DemandaTecnica {
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
     
-    @OneToOne(mappedBy = "demandaTecnica", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "demandaTecnica", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private TermoAbertura termoAbertura;
     
-    @OneToOne(mappedBy = "demandaTecnica", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "demandaTecnica", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private TermoPlanejamento termoPlanejamento;
     
-    @OneToOne(mappedBy = "demandaTecnica", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "demandaTecnica", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private TermoEncerramento termoEncerramento;
     
     @ManyToOne(fetch = FetchType.LAZY)
@@ -67,9 +67,12 @@ public class DemandaTecnica {
     @Column(name = "avaliacao_disponivel")
     private Boolean avaliacaoDisponivel = false;
 
-    @OneToOne(mappedBy = "demanda", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "demanda", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private DemandaAvaliacao avaliacao;
-    
+
+    @OneToOne(mappedBy = "demanda", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private DemandaExecucao execucao;
+
     @PrePersist
     protected void onCreate() {
         dataAbertura = LocalDateTime.now();

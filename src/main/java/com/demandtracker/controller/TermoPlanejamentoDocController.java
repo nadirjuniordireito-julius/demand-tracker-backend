@@ -147,13 +147,25 @@ public class TermoPlanejamentoDocController {
         return ResponseEntity.ok(exists);
     }
 
-    @PutMapping("/termo/{documentoId}/assinar")
+    /**
+     * Assina o documento do termo de planejamento.
+     * Path usa o ID do documento (TermoPlanejamentoDoc).
+     * Parâmetros: hashPdf, usuarioId, pageNumber (ou page), x, y, width, height.
+     */
+    @PutMapping("/{id}/assinar")
     public ResponseEntity<Void> assinar(
-        @PathVariable Long documentoId, 
-        @RequestParam String hashPdf, 
+        @PathVariable Long id,
+        @RequestParam String hashPdf,
         @RequestParam Long usuarioId,
+        @RequestParam(value = "pageNumber", required = false) Long pageNumber,
+        @RequestParam(value = "page", required = false) Long page,
+        @RequestParam(value = "x", required = false) Float x,
+        @RequestParam(value = "y", required = false) Float y,
+        @RequestParam(value = "width", required = false) Long width,
+        @RequestParam(value = "height", required = false) Long height,
         HttpServletRequest request) {
-        service.assinar(documentoId, hashPdf, usuarioId, request);
+        Long pageParam = pageNumber != null ? pageNumber : page;
+        service.assinar(id, hashPdf, usuarioId, pageParam, x, y, width, height, request);
         return ResponseEntity.noContent().build();
     }
 }

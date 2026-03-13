@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
  * Habilita cache em memória (ConcurrentMap).
  * Para produção com Redis: spring.cache.type=redis e configurar RedisCacheManager.
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableCaching
 public class CacheConfig {
 

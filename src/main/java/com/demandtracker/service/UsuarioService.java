@@ -57,7 +57,7 @@ public class UsuarioService {
     public UsuarioDTO create(UsuarioCreateDTO dto) {
         Usuario usuario = new Usuario();
         usuario.setNome(dto.getNome());
-        usuario.setEmail(dto.getNome().toLowerCase().replace(" ", ".") + "@empresa.com");
+        usuario.setEmail(dto.getNome().toLowerCase());
         String encodedPassword = passwordEncoder.encode(dto.getPassword());
         usuario.setPassword(encodedPassword);
         usuario.setPerfil(dto.getPerfil());

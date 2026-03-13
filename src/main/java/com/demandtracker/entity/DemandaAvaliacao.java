@@ -121,13 +121,13 @@ public class DemandaAvaliacao {
     @Column(name = "indice_risco", precision = 10, scale = 4)
     private BigDecimal indiceRisco;
 
-    @OneToMany(mappedBy = "avaliacao", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "avaliacao", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<DemandaAvaliacaoRisco> riscos = new ArrayList<>();
 
-    @OneToOne(mappedBy = "avaliacao", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "avaliacao", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private DemandaAvaliacaoTexto texto;
 
-    @OneToOne(mappedBy = "avaliacao", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "avaliacao", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private DemandaAvaliacaoDoc doc;
 
     @PrePersist

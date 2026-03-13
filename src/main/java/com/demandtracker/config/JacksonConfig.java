@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * Configura o Jackson para aceitar "yyyy-MM-dd" em qualquer campo LocalDateTime
  * (interpretado como 00:00:00), além do formato ISO com hora.
  */
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class JacksonConfig {
 
     @Bean

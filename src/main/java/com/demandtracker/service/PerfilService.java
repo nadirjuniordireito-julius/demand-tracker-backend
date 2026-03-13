@@ -13,7 +13,9 @@ import com.demandtracker.repository.ProjetoRepository;
 import com.demandtracker.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,18 +28,23 @@ public class PerfilService {
     private final ProjetoRepository projetoRepository;
     
     public Page<PerfilDTO> findAll(String nome, Long projetoId, Pageable pageable) {
+        Pageable ordenadoPorNome = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                pageable.getSort().isSorted() ? pageable.getSort() : Sort.by("nome")
+        );
         Page<Perfil> perfis;
-        
+
         if (nome != null && projetoId != null) {
-            perfis = perfilRepository.findByNomeContainingIgnoreCaseAndProjetoId(nome, projetoId, pageable);
+            perfis = perfilRepository.findByNomeContainingIgnoreCaseAndProjetoId(nome, projetoId, ordenadoPorNome);
         } else if (nome != null) {
-            perfis = perfilRepository.findByNomeContainingIgnoreCase(nome, pageable);
+            perfis = perfilRepository.findByNomeContainingIgnoreCase(nome, ordenadoPorNome);
         } else if (projetoId != null) {
-            perfis = perfilRepository.findByProjetoId(projetoId, pageable);
+            perfis = perfilRepository.findByProjetoId(projetoId, ordenadoPorNome);
         } else {
-            perfis = perfilRepository.findAll(pageable);
+            perfis = perfilRepository.findAll(ordenadoPorNome);
         }
-        
+
         return perfis.map(PerfilDTO::fromEntity);
     }
     

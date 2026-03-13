@@ -48,6 +48,6 @@ public class TermoPlanejamento {
     @Column(name = "data_fim_execucao", nullable = true)
     private LocalDate dataFimExecucao;
     
-    @OneToMany(mappedBy = "termoPlanejamento", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "termoPlanejamento", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<TermoPlanejamentoCusto> custos;
 }
