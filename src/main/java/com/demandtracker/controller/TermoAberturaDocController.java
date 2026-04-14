@@ -3,6 +3,7 @@ package com.demandtracker.controller;
 import com.demandtracker.dto.TermoAberturaDocCreateDTO;
 import com.demandtracker.dto.TermoAberturaDocResponseDTO;
 import com.demandtracker.dto.TermoAberturaDocUpdateDTO;
+import com.demandtracker.dto.TermoAberturaDocValidacaoHashDTO;
 import com.demandtracker.service.TermoAberturaDocService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -192,6 +193,17 @@ public class TermoAberturaDocController {
         Long pageParam = pageNumber != null ? pageNumber : page;
         service.assinar(id, hashPdf, usuarioId, pageParam, x, y, width, height, request);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Valida integridade do PDF armazenado comparando com hash SHA-256 informado.
+     * Recebe ID do documento (TermoAberturaDoc) e hash calculado no frontend.
+     */
+    @GetMapping("/{id}/validar-hash")
+    public ResponseEntity<TermoAberturaDocValidacaoHashDTO> validarHash(
+            @PathVariable Long id,
+            @RequestParam String hashPdf) {
+        return ResponseEntity.ok(service.validarIntegridadeHash(id, hashPdf));
     }
 
 }

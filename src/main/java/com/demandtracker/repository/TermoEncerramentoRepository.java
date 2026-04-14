@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -28,6 +29,30 @@ public interface TermoEncerramentoRepository extends JpaRepository<TermoEncerram
            "JOIN c.termoEncerramento te JOIN te.demandaTecnica d " +
            "WHERE d.metaProduto.id = :metaProdutoId AND d.status = :status")
     BigDecimal sumValorExecutadoByMetaProdutoIdAndStatus(@Param("metaProdutoId") Long metaProdutoId, @Param("status") String status);
+
+    @Query("SELECT COALESCE(SUM(c.qtdeHora * c.valorHora), 0) FROM TermoEncerramentoCusto c " +
+            "JOIN c.termoEncerramento te JOIN te.demandaTecnica d " +
+            "WHERE d.metaProduto.id = :metaProdutoId")
+    BigDecimal sumValorExecutadoByMetaProdutoId(@Param("metaProdutoId") Long metaProdutoId);
+
+    @Query("SELECT COALESCE(SUM(c.qtdeHora * c.valorHora), 0) FROM TermoEncerramentoCusto c " +
+           "JOIN c.termoEncerramento te JOIN te.demandaTecnica d " +
+           "WHERE d.metaProduto.id = :metaProdutoId AND d.status = :status " +
+           "AND te.dataTermo >= :dataInicio AND te.dataTermo <= :dataFim")
+    BigDecimal sumValorExecutadoByMetaProdutoIdAndStatusAndDataTermoBetween(
+            @Param("metaProdutoId") Long metaProdutoId,
+            @Param("status") String status,
+            @Param("dataInicio") LocalDateTime dataInicio,
+            @Param("dataFim") LocalDateTime dataFim);
+
+    @Query("SELECT COALESCE(SUM(c.qtdeHora * c.valorHora), 0) FROM TermoEncerramentoCusto c " +
+            "JOIN c.termoEncerramento te JOIN te.demandaTecnica d " +
+            "WHERE d.metaProduto.id = :metaProdutoId " +
+            "AND te.dataTermo >= :dataInicio AND te.dataTermo <= :dataFim")
+    BigDecimal sumValorExecutadoByMetaProdutoIdAndDataTermoBetween(
+            @Param("metaProdutoId") Long metaProdutoId,
+            @Param("dataInicio") LocalDateTime dataInicio,
+            @Param("dataFim") LocalDateTime dataFim);
 
     @Query("SELECT COALESCE(SUM(c.qtdeHora * c.valorHora), 0) FROM TermoEncerramentoCusto c")
     BigDecimal sumCustosRealizados();

@@ -44,6 +44,11 @@ public class SemaforoNodeDTO {
     /** Valor total executado (meta = soma dos produtos; produto = soma dos custos das demandas encerradas do produto). */
     private BigDecimal valorTotalExecutado;
 
+    /** Preenchidos quando nivel = DEMANDA: IDs dos termos vinculados à demanda técnica. */
+    private Long idTermoAbertura;
+    private Long idTermoPlanejamento;
+    private Long idTermoEncerramento;
+
     private List<SemaforoNodeDTO> children = new ArrayList<>();
 }
 

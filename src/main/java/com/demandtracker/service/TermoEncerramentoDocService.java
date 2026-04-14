@@ -3,6 +3,7 @@ package com.demandtracker.service;
 import com.demandtracker.dto.TermoEncerramentoDocCreateDTO;
 import com.demandtracker.dto.TermoEncerramentoDocResponseDTO;
 import com.demandtracker.dto.TermoEncerramentoDocUpdateDTO;
+import com.demandtracker.dto.TermoEncerramentoDocValidacaoHashDTO;
 import com.demandtracker.entity.TermoEncerramento;
 import com.demandtracker.entity.TermoEncerramentoDoc;
 import com.demandtracker.entity.Usuario;
@@ -20,7 +21,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.demandtracker.service.TermoEncerramentoService;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +31,7 @@ public class TermoEncerramentoDocService {
     private final UsuarioRepository  usuarioRepository;
     private final TermoEncerramentoService termoEncerramentoService;
     private final DocumentoService documentoService;
+    private final HashService hashService;
     
     /**
      * Cria um novo documento para um Termo de Encerramento
@@ -212,6 +213,22 @@ public class TermoEncerramentoDocService {
 
         // Encerrar a demanda
         termoEncerramentoService.sign(doc.getTermoEncerramento().getId());
+    }
+
+    @Transactional(readOnly = true)
+    public TermoEncerramentoDocValidacaoHashDTO validarIntegridadeHash(Long documentoId, String hashPdfInformado) {
+        TermoEncerramentoDoc doc = repository.findById(documentoId)
+                .orElseThrow(() -> new RuntimeException("Documento não encontrado com ID: " + documentoId));
+
+        String hashCalculado = hashService.calcularSha256Hex(doc.getArquivoPdf());
+        boolean valido = hashCalculado.equalsIgnoreCase(hashPdfInformado);
+
+        return new TermoEncerramentoDocValidacaoHashDTO(
+                documentoId,
+                valido,
+                hashPdfInformado,
+                hashCalculado
+        );
     }
 }
 

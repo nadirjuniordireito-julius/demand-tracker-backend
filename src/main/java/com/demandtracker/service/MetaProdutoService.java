@@ -7,16 +7,21 @@ import com.demandtracker.exception.BadRequestException;
 import com.demandtracker.exception.ResourceNotFoundException;
 import com.demandtracker.repository.MetaProdutoRepository;
 import com.demandtracker.repository.ProjetoMetaRepository;
+import com.demandtracker.repository.TermoPlanejamentoRepository;
 import com.demandtracker.repository.TermoEncerramentoCustoRepository;
+import com.demandtracker.repository.TermoEncerramentoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +30,8 @@ public class MetaProdutoService {
     private final MetaProdutoRepository metaProdutoRepository;
     private final ProjetoMetaRepository projetoMetaRepository;
     private final TermoEncerramentoCustoRepository termoEncerramentoCustoRepository;
+    private final TermoPlanejamentoRepository termoPlanejamentoRepository;
+    private final TermoEncerramentoRepository termoEncerramentoRepository;
 
     public Page<MetaProdutoDTO> findAll(String codigo, String nome, Long projetoMetaId, String status, Pageable pageable) {
         Page<MetaProduto> produtos;
@@ -182,5 +189,81 @@ public class MetaProdutoService {
         }
         meta.setPercExecutado(perc);
         metaProdutoRepository.save(meta);
+    }
+
+    @Transactional(readOnly = true)
+    public MetaProdutoEvolucaoTrimestralDTO getEvolucaoTrimestral(Long metaProdutoId) {
+        MetaProduto produto = metaProdutoRepository.findById(metaProdutoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Produto da meta não encontrado com ID: " + metaProdutoId));
+
+        if (produto.getDataInicio() == null || produto.getDataFim() == null) {
+            throw new BadRequestException("MetaProduto ID " + metaProdutoId + " não possui dataInicio/dataFim para análise trimestral.");
+        }
+        if (produto.getDataFim().isBefore(produto.getDataInicio())) {
+            throw new BadRequestException("MetaProduto ID " + metaProdutoId + " possui dataFim menor que dataInicio.");
+        }
+
+        // Regra: previsto = soma dos Termos de Planejamento das DTs do produto
+        BigDecimal totalPrevistoProduto = termoPlanejamentoRepository.sumValorPlanejadoByMetaProdutoId(produto.getId());
+        if (totalPrevistoProduto == null) {
+            totalPrevistoProduto = BigDecimal.ZERO;
+        }
+        // Regra: executado = soma dos Termos de Encerramento das DTs do produto
+        BigDecimal totalExecutadoProduto = termoEncerramentoRepository.sumValorExecutadoByMetaProdutoId(produto.getId());
+        if (totalExecutadoProduto == null) {
+            totalExecutadoProduto = BigDecimal.ZERO;
+        }
+
+        List<MetaProdutoEvolucaoTrimestralItemDTO> itens = new ArrayList<>();
+        LocalDate cursor = produto.getDataInicio();
+        int seq = 1;
+        while (!cursor.isAfter(produto.getDataFim())) {
+            LocalDate fimTri = cursor.plusMonths(3).minusDays(1);
+            if (fimTri.isAfter(produto.getDataFim())) {
+                fimTri = produto.getDataFim();
+            }
+
+            BigDecimal previstoTrimestre = termoPlanejamentoRepository
+                    .sumValorPlanejadoByMetaProdutoIdAndDataAberturaBetween(
+                            produto.getId(),
+                            LocalDateTime.of(cursor, java.time.LocalTime.MIN),
+                            LocalDateTime.of(fimTri, java.time.LocalTime.MAX)
+                    );
+            if (previstoTrimestre == null) {
+                previstoTrimestre = BigDecimal.ZERO;
+            }
+
+            BigDecimal executadoTrimestre = termoEncerramentoRepository
+                    .sumValorExecutadoByMetaProdutoIdAndDataTermoBetween(
+                            produto.getId(),
+                            LocalDateTime.of(cursor, java.time.LocalTime.MIN),
+                            LocalDateTime.of(fimTri, java.time.LocalTime.MAX)
+                    );
+            if (executadoTrimestre == null) {
+                executadoTrimestre = BigDecimal.ZERO;
+            }
+
+            itens.add(new MetaProdutoEvolucaoTrimestralItemDTO(
+                    seq,
+                    cursor,
+                    fimTri,
+                    previstoTrimestre,
+                    executadoTrimestre
+            ));
+
+            seq++;
+            cursor = fimTri.plusDays(1);
+        }
+
+        MetaProdutoEvolucaoTrimestralDTO response = new MetaProdutoEvolucaoTrimestralDTO();
+        response.setMetaProdutoId(produto.getId());
+        response.setCodigoProduto(produto.getCodigo());
+        response.setNomeProduto(produto.getNome());
+        response.setDataInicioAnalise(produto.getDataInicio());
+        response.setDataFimAnalise(produto.getDataFim());
+        response.setTotalPrevistoProduto(totalPrevistoProduto);
+        response.setTotalExecutadoProduto(totalExecutadoProduto);
+        response.setTrimestres(itens);
+        return response;
     }
 }

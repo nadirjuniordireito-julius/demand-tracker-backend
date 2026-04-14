@@ -3,6 +3,7 @@ package com.demandtracker.service;
 import com.demandtracker.dto.TermoPlanejamentoDocCreateDTO;
 import com.demandtracker.dto.TermoPlanejamentoDocResponseDTO;
 import com.demandtracker.dto.TermoPlanejamentoDocUpdateDTO;
+import com.demandtracker.dto.TermoPlanejamentoDocValidacaoHashDTO;
 import com.demandtracker.entity.TermoPlanejamento;
 import com.demandtracker.entity.TermoPlanejamentoDoc;
 import com.demandtracker.repository.TermoPlanejamentoDocRepository;
@@ -20,7 +21,6 @@ import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletRequest;
 import com.demandtracker.entity.Usuario;
 import com.demandtracker.repository.UsuarioRepository;
-import com.demandtracker.service.DocumentoService;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +31,7 @@ public class TermoPlanejamentoDocService {
     private final UsuarioRepository usuarioRepository;
     private final TermoPlanejamentoService termoPlanejamentoService;
     private final DocumentoService documentoService;
+    private final HashService hashService;
     /**
      * Cria um novo documento para um Termo de Planejamento
      */
@@ -215,6 +216,22 @@ public class TermoPlanejamentoDocService {
 
         // Encerrar a demanda
         termoPlanejamentoService.sign(doc.getTermoPlanejamento().getId());
+    }
+
+    @Transactional(readOnly = true)
+    public TermoPlanejamentoDocValidacaoHashDTO validarIntegridadeHash(Long documentoId, String hashPdfInformado) {
+        TermoPlanejamentoDoc doc = repository.findById(documentoId)
+                .orElseThrow(() -> new RuntimeException("Documento não encontrado com ID: " + documentoId));
+
+        String hashCalculado = hashService.calcularSha256Hex(doc.getArquivoPdf());
+        boolean valido = hashCalculado.equalsIgnoreCase(hashPdfInformado);
+
+        return new TermoPlanejamentoDocValidacaoHashDTO(
+                documentoId,
+                valido,
+                hashPdfInformado,
+                hashCalculado
+        );
     }
 
 }

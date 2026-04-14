@@ -12,9 +12,9 @@ public enum StatusDemandaTecnica {
     B("Em abertura"),
     C("Aberta e assinada"),
     D("Em planejamento"),
-    E("Planejado e assinado"),
+    E("Em execução"),
     F("Em encerramento"),
-    G("Encerrado e assinado"),
+    G("Encerrada"),
     Z("Cancelada");
 
     private final String descricao;

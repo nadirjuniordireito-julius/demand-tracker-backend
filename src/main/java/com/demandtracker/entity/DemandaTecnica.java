@@ -60,7 +60,6 @@ public class DemandaTecnica {
      */
     public static final String STATUS_ENCERRADA = "G";
 
-    /** Código do status (A=Em elaboração, B=Em abertura, C=Aberta e assinada, D=Em planejamento, E=Planejado e assinado, F=Em encerramento, G=Encerrado e assinado, Z=Cancelada). */
     @Column(name = "status", nullable = true, length = 1)
     private String status;
 

@@ -32,6 +32,11 @@ public class MetaProdutoController {
     public ResponseEntity<MetaProdutoDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(metaProdutoService.findById(id));
     }
+
+    @GetMapping("/{id}/evolucao-trimestral")
+    public ResponseEntity<MetaProdutoEvolucaoTrimestralDTO> getEvolucaoTrimestral(@PathVariable Long id) {
+        return ResponseEntity.ok(metaProdutoService.getEvolucaoTrimestral(id));
+    }
     
     @PostMapping
     public ResponseEntity<MetaProdutoDTO> create(@Valid @RequestBody MetaProdutoCreateDTO dto) {

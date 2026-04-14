@@ -18,15 +18,16 @@ import com.demandtracker.repository.DemandaTecnicaRepository;
 import com.demandtracker.repository.MetaProdutoRepository;
 import com.demandtracker.repository.ProjetoMetaRepository;
 import com.demandtracker.repository.ProjetoRepository;
+import com.demandtracker.repository.TermoAberturaRepository;
 import com.demandtracker.repository.TermoEncerramentoCustoRepository;
 import com.demandtracker.repository.TermoEncerramentoRepository;
+import com.demandtracker.repository.TermoPlanejamentoRepository;
 import com.demandtracker.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.demandtracker.repository.DesembolsoRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -40,9 +41,10 @@ public class ProjetoService {
     private final MetaProdutoRepository metaProdutoRepository;
     private final TermoEncerramentoCustoRepository termoEncerramentoCustoRepository;
     private final TermoEncerramentoRepository termoEncerramentoRepository;
+    private final TermoAberturaRepository termoAberturaRepository;
+    private final TermoPlanejamentoRepository termoPlanejamentoRepository;
     private final ProjetoMetaRepository projetoMetaRepository;
     private final DemandaTecnicaRepository demandaTecnicaRepository;
-    private final DesembolsoRepository desembolsoRepository;
 
     public Page<ProjetoDTO> findAll(String nome, String codTed, Long usuarioId, Pageable pageable) {
         Page<Projeto> projetos;
@@ -254,8 +256,6 @@ public class ProjetoService {
         LocalDate maxFim = null;
         int totalDemandasMeta = 0;
         int totalDemandasEncerradasMeta = 0;
-        BigDecimal somaPercExecProdutos = BigDecimal.ZERO;
-        int qtdProdutosComPerc = 0;
         BigDecimal somaValorPrevisto = BigDecimal.ZERO;
         BigDecimal somaValorExecutado = BigDecimal.ZERO;
 
@@ -280,10 +280,6 @@ public class ProjetoService {
             if (produtoNode.getQtdDemandasEncerradas() != null) {
                 totalDemandasEncerradasMeta += produtoNode.getQtdDemandasEncerradas();
             }
-            if (produtoNode.getPercentualExecutado() != null) {
-                somaPercExecProdutos = somaPercExecProdutos.add(produtoNode.getPercentualExecutado());
-                qtdProdutosComPerc++;
-            }
             if (produtoNode.getValorTotalPrevisto() != null) {
                 somaValorPrevisto = somaValorPrevisto.add(produtoNode.getValorTotalPrevisto());
             }
@@ -297,13 +293,11 @@ public class ProjetoService {
         metaNode.setDataInicio(minInicio);
         metaNode.setDataFim(maxFim);
 
-        if (qtdProdutosComPerc > 0) {
-            metaNode.setPercentualExecutado(somaPercExecProdutos.divide(BigDecimal.valueOf(qtdProdutosComPerc), 2, java.math.RoundingMode.HALF_UP));
-        }
         metaNode.setQtdDemandas(totalDemandasMeta);
         metaNode.setQtdDemandasEncerradas(totalDemandasEncerradasMeta);
         metaNode.setValorTotalPrevisto(somaValorPrevisto);
         metaNode.setValorTotalExecutado(somaValorExecutado);
+        metaNode.setPercentualExecutado(calcularPercentualExecutado(somaValorPrevisto, somaValorExecutado));
         metaNode.setStatus(statusMeta);
 
         return metaNode;
@@ -330,13 +324,12 @@ public class ProjetoService {
         if (produto.getValorUnitario() != null && produto.getQuantidade() != null) {
             node.setValorTotalPrevisto(produto.getValorUnitario().multiply(BigDecimal.valueOf(produto.getQuantidade())));
         }
+
         BigDecimal valorExecutado = termoEncerramentoRepository.sumValorExecutadoByMetaProdutoIdAndStatus(
                 produto.getId(), com.demandtracker.entity.DemandaTecnica.STATUS_ENCERRADA);
         node.setValorTotalExecutado(valorExecutado != null ? valorExecutado : BigDecimal.ZERO);
 
-        if (produto.getPercExecutado() != null) {
-            node.setPercentualExecutado(BigDecimal.valueOf(produto.getPercExecutado()).setScale(2));
-        }
+        node.setPercentualExecutado(calcularPercentualExecutado(node.getValorTotalPrevisto(), node.getValorTotalExecutado()));
 
         // Não considerar demandas canceladas (status Z) no semáforo
         final String statusCancelada = "Z";
@@ -348,9 +341,8 @@ public class ProjetoService {
         node.setStatus(calcularStatusProduto(produto));
 
         List<DemandaTecnica> demandas = demandaTecnicaRepository.findByMetaProdutoIdAndStatusNot(produto.getId(), statusCancelada);
-        BigDecimal valorTotalPrevistoProduto = node.getValorTotalPrevisto() != null ? node.getValorTotalPrevisto() : BigDecimal.ZERO;
         for (DemandaTecnica demanda : demandas) {
-            node.getChildren().add(buildDemandaNode(demanda, valorTotalPrevistoProduto));
+            node.getChildren().add(buildDemandaNode(demanda));
         }
 
         return node;
@@ -359,10 +351,9 @@ public class ProjetoService {
     /**
      * Calculo do nó da D E M A N D A (DemandaTecnica)
      * @param demanda
-     * @param valorTotalPrevistoProduto
      * @return
      */
-    private SemaforoNodeDTO buildDemandaNode(DemandaTecnica demanda, BigDecimal valorTotalPrevistoProduto) {
+    private SemaforoNodeDTO buildDemandaNode(DemandaTecnica demanda) {
         String statusDemanda = demanda.getStatus() != null ? demanda.getStatus() : "";
         SemaforoNodeDTO node = new SemaforoNodeDTO();
         node.setId(demanda.getId());
@@ -373,16 +364,26 @@ public class ProjetoService {
         node.setStatusDemanda(statusDemanda);
         node.setChildren(List.of());
 
+        termoAberturaRepository.findByDemandaTecnicaId(demanda.getId())
+                .ifPresent(t -> node.setIdTermoAbertura(t.getId()));
+        termoPlanejamentoRepository.findByDemandaTecnicaId(demanda.getId())
+                .ifPresent(t -> node.setIdTermoPlanejamento(t.getId()));
+        termoEncerramentoRepository.findByDemandaTecnicaId(demanda.getId())
+                .ifPresent(t -> node.setIdTermoEncerramento(t.getId()));
+
+        /**
+         * Valor total previsto de exeução da demanda
+         */ 
+        BigDecimal valorPlanejadoDemanda = termoPlanejamentoRepository.sumValorPlanejadoyDemandaTecnicaId(demanda.getId());
+        node.setValorTotalPrevisto(valorPlanejadoDemanda != null ? valorPlanejadoDemanda : BigDecimal.ZERO);
+        
+        /**
+         * Valor total executado de exeução da demanda
+         */ 
         BigDecimal valorExecutadoDemanda = termoEncerramentoRepository.sumValorExecutadoByDemandaTecnicaId(demanda.getId());
         node.setValorTotalExecutado(valorExecutadoDemanda != null ? valorExecutadoDemanda : BigDecimal.ZERO);
 
-        // Percentual = quanto o valor executado da demanda representa do valor total previsto do produto
-        if (valorTotalPrevistoProduto != null && valorTotalPrevistoProduto.compareTo(BigDecimal.ZERO) > 0 && node.getValorTotalExecutado() != null) {
-            BigDecimal perc = node.getValorTotalExecutado()
-                    .multiply(BigDecimal.valueOf(100))
-                    .divide(valorTotalPrevistoProduto, 2, java.math.RoundingMode.HALF_UP);
-            node.setPercentualExecutado(perc);
-        }
+        node.setPercentualExecutado(calcularPercentualExecutado(node.getValorTotalPrevisto(), node.getValorTotalExecutado()));
 
         return node;
     }
@@ -394,6 +395,15 @@ public class ProjetoService {
             case "Z" -> SemaforoStatus.CINZA;   // Cancelada
             default -> SemaforoStatus.AMARELO;  // Em andamento (A,B,C,D,E,F)
         };
+    }
+
+    private BigDecimal calcularPercentualExecutado(BigDecimal valorTotalPrevisto, BigDecimal valorTotalExecutado) {
+        if (valorTotalPrevisto == null || valorTotalPrevisto.compareTo(BigDecimal.ZERO) <= 0 || valorTotalExecutado == null) {
+            return BigDecimal.ZERO;
+        }
+        return valorTotalExecutado
+                .multiply(BigDecimal.valueOf(100))
+                .divide(valorTotalPrevisto, 2, java.math.RoundingMode.HALF_UP);
     }
 
     /**

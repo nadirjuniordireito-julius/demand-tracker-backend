@@ -3,6 +3,7 @@ package com.demandtracker.service;
 import com.demandtracker.dto.TermoAberturaDocCreateDTO;
 import com.demandtracker.dto.TermoAberturaDocResponseDTO;
 import com.demandtracker.dto.TermoAberturaDocUpdateDTO;
+import com.demandtracker.dto.TermoAberturaDocValidacaoHashDTO;
 import com.demandtracker.entity.TermoAbertura;
 import com.demandtracker.entity.TermoAberturaDoc;
 import com.demandtracker.repository.TermoAberturaDocRepository;
@@ -41,6 +42,7 @@ public class TermoAberturaDocService {
     private final UsuarioRepository usuarioRepository;
     private final TermoAberturaService termoAberturaService;
     private final DocumentoService documentoService;
+    private final HashService hashService;
     /**
      * Cria um novo documento para um Termo de Abertura
      */
@@ -270,6 +272,22 @@ public class TermoAberturaDocService {
         termoAberturaService.sign(doc.getTermoAbertura().getId());
 
 
+    }
+
+    @Transactional(readOnly = true)
+    public TermoAberturaDocValidacaoHashDTO validarIntegridadeHash(Long documentoId, String hashPdfInformado) {
+        TermoAberturaDoc doc = repository.findById(documentoId)
+                .orElseThrow(() -> new RuntimeException("Documento não encontrado com ID: " + documentoId));
+
+        String hashCalculado = hashService.calcularSha256Hex(doc.getArquivoPdf());
+        boolean valido = hashCalculado.equalsIgnoreCase(hashPdfInformado);
+
+        return new TermoAberturaDocValidacaoHashDTO(
+                documentoId,
+                valido,
+                hashPdfInformado,
+                hashCalculado
+        );
     }
 
 }
