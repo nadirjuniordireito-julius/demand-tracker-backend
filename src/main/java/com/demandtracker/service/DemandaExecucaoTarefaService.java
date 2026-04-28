@@ -5,6 +5,7 @@ import com.demandtracker.dto.DemandaExecucaoTarefaDTO;
 import com.demandtracker.dto.DemandaExecucaoTarefaUpdateDTO;
 import com.demandtracker.entity.DemandaExecucao;
 import com.demandtracker.entity.DemandaExecucaoTarefa;
+import com.demandtracker.entity.enums.StatusTarefa;
 import com.demandtracker.exception.ResourceNotFoundException;
 import com.demandtracker.repository.DemandaExecucaoRepository;
 import com.demandtracker.repository.DemandaExecucaoTarefaRepository;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,7 +26,7 @@ public class DemandaExecucaoTarefaService {
 
     @Transactional(readOnly = true)
     public List<DemandaExecucaoTarefaDTO> findByDemandaExecucaoId(Long demandaExecucaoId) {
-        return repository.findByDemandaExecucaoIdOrderByIdAsc(demandaExecucaoId).stream()
+        return repository.findByDemandaExecucaoIdOrderBySequenciaAscIdAsc(demandaExecucaoId).stream()
                 .map(DemandaExecucaoTarefaDTO::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -53,6 +55,9 @@ public class DemandaExecucaoTarefaService {
         t.setDataFimReal(dto.getDataFimReal());
         t.setPercentualProgresso(dto.getPercentualProgresso());
         t.setEstimativaHoras(dto.getEstimativaHoras());
+        t.setSequencia(dto.getSequencia());
+
+        aplicarRegraStatusPorPercentual(t);
 
         return DemandaExecucaoTarefaDTO.fromEntity(repository.save(t));
     }
@@ -72,6 +77,9 @@ public class DemandaExecucaoTarefaService {
         if (dto.getDataFimReal() != null) t.setDataFimReal(dto.getDataFimReal());
         if (dto.getPercentualProgresso() != null) t.setPercentualProgresso(dto.getPercentualProgresso());
         if (dto.getEstimativaHoras() != null) t.setEstimativaHoras(dto.getEstimativaHoras());
+        if (dto.getSequencia() != null) t.setSequencia(dto.getSequencia());
+
+        aplicarRegraStatusPorPercentual(t);
 
         return DemandaExecucaoTarefaDTO.fromEntity(repository.save(t));
     }
@@ -82,5 +90,26 @@ public class DemandaExecucaoTarefaService {
             throw new ResourceNotFoundException("Tarefa não encontrada com ID: " + id);
         }
         repository.deleteById(id);
+    }
+
+    /**
+     * Regra automática de status conforme o percentual de progresso da tarefa:
+     *  - {@code percentualProgresso == 100} → status passa a {@link StatusTarefa#CONCLUIDA};
+     *  - {@code percentualProgresso < 100} e status atual {@link StatusTarefa#CONCLUIDA} → reverte para
+     *    {@link StatusTarefa#EM_ANDAMENTO}.
+     *
+     * Demais combinações (status PLANEJADA, BLOQUEADA, ATRASADA com percentual &lt; 100) são preservadas
+     * para não sobrescrever escolhas legítimas do usuário.
+     */
+    private void aplicarRegraStatusPorPercentual(DemandaExecucaoTarefa t) {
+        if (t == null || t.getPercentualProgresso() == null) {
+            return;
+        }
+        int cmp = t.getPercentualProgresso().compareTo(BigDecimal.valueOf(100));
+        if (cmp >= 0) {
+            t.setStatus(StatusTarefa.CONCLUIDA);
+        } else if (StatusTarefa.CONCLUIDA.equals(t.getStatus())) {
+            t.setStatus(StatusTarefa.EM_ANDAMENTO);
+        }
     }
 }

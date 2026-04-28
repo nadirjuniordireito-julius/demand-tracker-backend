@@ -26,6 +26,10 @@ public class SemaforoNodeDTO {
     private String codigo;
     private String nome;
 
+    /** Descrição do produto (MetaProduto). Preenchido quando nivel = PRODUTO. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String descricao;
+
     private SemaforoStatus status;
 
     /** Código do status da demanda técnica (A,B,C,D,E,F,G,Z). Preenchido apenas quando nivel = DEMANDA. */
@@ -48,6 +52,10 @@ public class SemaforoNodeDTO {
     private Long idTermoAbertura;
     private Long idTermoPlanejamento;
     private Long idTermoEncerramento;
+
+    /** Detalhes de execução da demanda técnica. Opcional e preenchido quando houver execução. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private DemandaExecucaoDTO execucao;
 
     private List<SemaforoNodeDTO> children = new ArrayList<>();
 }

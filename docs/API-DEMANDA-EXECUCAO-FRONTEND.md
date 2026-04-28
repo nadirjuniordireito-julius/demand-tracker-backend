@@ -188,7 +188,10 @@ Retorna um DTO com dados suficientes para o frontend montar o diagrama de Gantt 
 | id               | long    | ID do vínculo recurso-tarefa |
 | profissionalId   | long    | ID do profissional |
 | nome             | string  | Nome do profissional |
+| perfilId         | long    | ID do perfil aplicado ao recurso (opcional) |
+| perfilNome       | string  | Nome do perfil aplicado ao recurso (opcional) |
 | horasPlanejadas  | decimal | Horas planejadas |
+| horasExecutadas  | decimal | Horas executadas (opcional) |
 
 No Gantt, use `dataInicioPlanejada`/`dataFimPlanejada` (ou `dataInicioReal`/`dataFimReal` quando preenchidas) para as barras; `predecessorIds` para desenhar as setas de dependência (tarefa A → tarefa B quando B.predecessorIds contém A.id).
 
@@ -441,7 +444,9 @@ Neste exemplo, a tarefa 11 depende da 10 (`predecessorIds: [10]`) e a tarefa 12 
 |-------------------------|---------|-------------|------------------------|
 | demandaExecucaoTarefaId | long    | Sim         | ID da tarefa           |
 | profissionalId          | long    | Sim         | ID do profissional     |
+| perfilId               | long    | Não         | ID do perfil associado ao recurso |
 | horasPlanejadas         | decimal | Sim         | ≥ 0                    |
+| horasExecutadas         | decimal | Não         | ≥ 0                    |
 
 **Resposta:** `201 Created` – `DemandaExecucaoTarefaRecursoDTO`.
 
@@ -449,7 +454,7 @@ Neste exemplo, a tarefa 11 depende da 10 (`predecessorIds: [10]`) e a tarefa 12 
 
 **PUT** `/api/demandas-execucao-tarefas-recursos/{id}`
 
-**Body (DemandaExecucaoTarefaRecursoUpdateDTO):** profissionalId (opcional), horasPlanejadas (opcional).
+**Body (DemandaExecucaoTarefaRecursoUpdateDTO):** profissionalId (opcional), perfilId (opcional), horasPlanejadas (opcional), horasExecutadas (opcional).
 
 **Resposta:** `200 OK` – `DemandaExecucaoTarefaRecursoDTO`.
 
@@ -467,7 +472,10 @@ Neste exemplo, a tarefa 11 depende da 10 (`predecessorIds: [10]`) e a tarefa 12 
 | demandaExecucaoTarefaId | long    | ID da tarefa             |
 | profissionalId          | long    | ID do profissional       |
 | profissional            | object  | ProfissionalDTO          |
+| perfilId               | long    | ID do perfil do recurso (opcional) |
+| perfil                 | object  | PerfilDTO (opcional)     |
 | horasPlanejadas         | decimal | Horas planejadas        |
+| horasExecutadas         | decimal | Horas executadas (opcional) |
 
 ---
 
@@ -531,7 +539,7 @@ Neste exemplo, a tarefa 11 depende da 10 (`predecessorIds: [10]`) e a tarefa 12 
 1. **Demanda técnica** → Verificar se existe execução: `GET /api/demandas-execucao/demanda/{demandaTecnicaId}`. Se 404, criar: `POST /api/demandas-execucao` com `demandaTecnicaId`.
 2. **Tarefas** → Listar: `GET /api/demandas-execucao-tarefas/execucao/{demandaExecucaoId}`. Criar/editar/excluir via endpoints de tarefas.
 3. **Dependências** → Criar após existirem duas tarefas; listar por tarefa origem ou destino para montar grafo/lista.
-4. **Recursos** → Por tarefa: listar, criar, atualizar, excluir recursos (profissional + horas).
+4. **Recursos** → Por tarefa: listar, criar, atualizar, excluir recursos (profissional + perfil opcional + horas).
 5. **Apontamentos** → Por tarefa: listar (ordenado por data), criar, atualizar, excluir apontamentos de progresso.
 
 ---

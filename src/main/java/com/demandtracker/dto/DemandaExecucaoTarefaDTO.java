@@ -32,6 +32,7 @@ public class DemandaExecucaoTarefaDTO {
     private LocalDate dataFimReal;
     private BigDecimal percentualProgresso;
     private BigDecimal estimativaHoras;
+    private Integer sequencia;
     private List<DemandaExecucaoTarefaRecursoDTO> recursos;
     private List<DemandaExecucaoTarefaApontamentoProgressoDTO> apontamentos;
 
@@ -50,6 +51,7 @@ public class DemandaExecucaoTarefaDTO {
         dto.setDataFimReal(t.getDataFimReal());
         dto.setPercentualProgresso(t.getPercentualProgresso());
         dto.setEstimativaHoras(t.getEstimativaHoras());
+        dto.setSequencia(t.getSequencia());
         dto.setRecursos(t.getRecursos() != null
                 ? t.getRecursos().stream().map(DemandaExecucaoTarefaRecursoDTO::fromEntity).collect(Collectors.toList())
                 : null);

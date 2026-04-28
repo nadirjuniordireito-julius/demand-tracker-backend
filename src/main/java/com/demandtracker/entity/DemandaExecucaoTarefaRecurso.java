@@ -29,6 +29,13 @@ public class DemandaExecucaoTarefaRecurso {
     @JoinColumn(name = "profissional_id", nullable = false)
     private Profissional profissional;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "perfil_id", nullable = true)
+    private Perfil perfil;
+
     @Column(name = "horas_planejadas", precision = 10, scale = 2, nullable = false)
     private BigDecimal horasPlanejadas;
+
+    @Column(name = "horas_executadas", precision = 10, scale = 2, nullable = true)
+    private BigDecimal horasExecutadas;
 }

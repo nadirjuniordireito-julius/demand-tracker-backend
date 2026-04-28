@@ -2,6 +2,7 @@ package com.demandtracker.service;
 
 import com.demandtracker.dto.*;
 import com.demandtracker.entity.*;
+import com.demandtracker.entity.enums.StatusDemandaTecnica;
 import com.demandtracker.exception.BadRequestException;
 import com.demandtracker.exception.ResourceNotFoundException;
 import com.demandtracker.repository.*;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.Year;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,7 @@ public class DemandaTecnicaService {
     private final UsuarioRepository usuarioRepository;
     private final MetaProdutoRepository metaProdutoRepository;
     private final TermoEncerramentoRepository termoEncerramentoRepository;
+    private final TermoAberturaService termoAberturaService;
     
     @Transactional(readOnly = true)
     public Page<DemandaTecnicaDTO> findAll(String codigo, String nome, Long projetoId, String status, Pageable pageable) {
@@ -127,6 +130,15 @@ public class DemandaTecnicaService {
         }
         
         DemandaTecnica saved = demandaRepository.save(demanda);
+        TermoAberturaCreateDTO termoAberturaCreateDTO = new TermoAberturaCreateDTO();
+        termoAberturaCreateDTO.setDemandaTecnicaId(saved.getId());
+        termoAberturaCreateDTO.setUsuarioId(saved.getUsuario().getId());
+        termoAberturaCreateDTO.setDataAbertura(saved.getDataAbertura() != null ? saved.getDataAbertura() : LocalDateTime.now());
+        termoAberturaCreateDTO.setDescricao("Abertura: " + saved.getNome());
+        termoAberturaService.create(termoAberturaCreateDTO);
+
+        saved.setStatus(StatusDemandaTecnica.B.getCodigo());
+        saved = demandaRepository.save(saved);
         return DemandaTecnicaDTO.fromEntity(saved);
     }
     

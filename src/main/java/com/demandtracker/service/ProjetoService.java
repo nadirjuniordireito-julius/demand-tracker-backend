@@ -1,6 +1,7 @@
 package com.demandtracker.service;
 
 import com.demandtracker.dto.ProjetoCreateDTO;
+import com.demandtracker.dto.DemandaExecucaoDTO;
 import com.demandtracker.dto.ProjetoDTO;
 import com.demandtracker.dto.ProjetoTotaisDTO;
 import com.demandtracker.dto.ProjetoUpdateDTO;
@@ -15,6 +16,7 @@ import com.demandtracker.entity.enums.SemaforoStatus;
 import com.demandtracker.exception.BadRequestException;
 import com.demandtracker.exception.ResourceNotFoundException;
 import com.demandtracker.repository.DemandaTecnicaRepository;
+import com.demandtracker.repository.DemandaExecucaoRepository;
 import com.demandtracker.repository.MetaProdutoRepository;
 import com.demandtracker.repository.ProjetoMetaRepository;
 import com.demandtracker.repository.ProjetoRepository;
@@ -45,6 +47,7 @@ public class ProjetoService {
     private final TermoPlanejamentoRepository termoPlanejamentoRepository;
     private final ProjetoMetaRepository projetoMetaRepository;
     private final DemandaTecnicaRepository demandaTecnicaRepository;
+    private final DemandaExecucaoRepository demandaExecucaoRepository;
 
     public Page<ProjetoDTO> findAll(String nome, String codTed, Long usuarioId, Pageable pageable) {
         Page<Projeto> projetos;
@@ -314,6 +317,7 @@ public class ProjetoService {
         node.setNivel(SemaforoNivel.PRODUTO);
         node.setCodigo(produto.getCodigo());
         node.setNome(produto.getNome());
+        node.setDescricao(produto.getDescricao());
 
         /** 
         node.setDataInicio(produto.getDataInicio());
@@ -384,6 +388,11 @@ public class ProjetoService {
         node.setValorTotalExecutado(valorExecutadoDemanda != null ? valorExecutadoDemanda : BigDecimal.ZERO);
 
         node.setPercentualExecutado(calcularPercentualExecutado(node.getValorTotalPrevisto(), node.getValorTotalExecutado()));
+        node.setExecucao(
+                demandaExecucaoRepository.findByDemandaId(demanda.getId())
+                        .map(DemandaExecucaoDTO::fromEntity)
+                        .orElse(null)
+        );
 
         return node;
     }

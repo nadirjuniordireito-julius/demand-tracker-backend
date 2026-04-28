@@ -38,4 +38,6 @@ public class DemandaExecucaoTarefaUpdateDTO {
 
     @DecimalMin(value = "0.00")
     private BigDecimal estimativaHoras;
+
+    private Integer sequencia;
 }

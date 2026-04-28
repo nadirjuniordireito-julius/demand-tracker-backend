@@ -8,6 +8,7 @@ import com.demandtracker.repository.UsuarioRepository;
 import com.demandtracker.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -25,15 +26,23 @@ public class AuthService {
     private final HttpServletResponse response;
 
     public AuthResponse login(LoginRequest request) {
-        Usuario usuario = usuarioRepository.findByEmail(request.getUsername())
+        String normalizedUsername = request.getUsername() != null ? request.getUsername().trim() : null;
+
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(normalizedUsername)
             .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado"));
         
-        authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                request.getUsername(),
-                request.getPassword()
-            )
-        );
+        try {
+            authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                    normalizedUsername,
+                    request.getPassword()
+                )
+            );
+        } catch (UsernameNotFoundException ex) {
+            throw ex;
+        } catch (BadCredentialsException ex) {
+            throw ex;
+        }
         
         String token = jwtService.generateAccessToken(
             org.springframework.security.core.userdetails.User.builder()

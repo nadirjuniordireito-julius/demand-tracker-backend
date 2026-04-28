@@ -19,7 +19,12 @@ public class DemandaExecucaoTarefaRecursoCreateDTO {
     @NotNull(message = "ID do profissional é obrigatório")
     private Long profissionalId;
 
+    private Long perfilId;
+
     @NotNull(message = "Horas planejadas é obrigatório")
     @DecimalMin(value = "0.00")
     private BigDecimal horasPlanejadas;
+
+    @DecimalMin(value = "0.00")
+    private BigDecimal horasExecutadas;
 }

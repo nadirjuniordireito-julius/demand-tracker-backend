@@ -133,7 +133,8 @@ public class TermoEncerramentoService {
         
         if (dto.getCustos() != null) {
             String status = termo.getDemandaTecnica() != null ? termo.getDemandaTecnica().getStatus() : null;
-            if (!"E".equals(status)) {
+            
+            if (!"F".equals(status)) {
                 List<TermoEncerramentoCusto> custosAtuais = termo.getCustos() != null ? termo.getCustos() : List.of();
                 Set<Long> perfisAtuais = custosAtuais.stream()
                         .map(c -> c.getPerfil() != null ? c.getPerfil().getId() : null)

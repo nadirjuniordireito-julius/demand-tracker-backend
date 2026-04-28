@@ -9,5 +9,5 @@ import java.util.List;
 @Repository
 public interface DemandaExecucaoTarefaRepository extends JpaRepository<DemandaExecucaoTarefa, Long> {
 
-    List<DemandaExecucaoTarefa> findByDemandaExecucaoIdOrderByIdAsc(Long demandaExecucaoId);
+    List<DemandaExecucaoTarefa> findByDemandaExecucaoIdOrderBySequenciaAscIdAsc(Long demandaExecucaoId);
 }

@@ -59,6 +59,9 @@ public class DemandaExecucaoTarefa {
     @Column(name = "estimativa_horas", precision = 10, scale = 2, nullable = false)
     private BigDecimal estimativaHoras;
 
+    @Column(name = "sequencia")
+    private Integer sequencia;
+
     @OneToMany(mappedBy = "demandaExecucaoTarefa", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<DemandaExecucaoTarefaRecurso> recursos;
 

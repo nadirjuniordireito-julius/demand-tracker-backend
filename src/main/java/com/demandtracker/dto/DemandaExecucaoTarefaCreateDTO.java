@@ -48,4 +48,6 @@ public class DemandaExecucaoTarefaCreateDTO {
     @NotNull(message = "Estimativa de horas é obrigatória")
     @DecimalMin(value = "0.00")
     private BigDecimal estimativaHoras;
+
+    private Integer sequencia;
 }

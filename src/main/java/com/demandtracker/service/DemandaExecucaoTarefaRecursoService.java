@@ -5,10 +5,12 @@ import com.demandtracker.dto.DemandaExecucaoTarefaRecursoDTO;
 import com.demandtracker.dto.DemandaExecucaoTarefaRecursoUpdateDTO;
 import com.demandtracker.entity.DemandaExecucaoTarefa;
 import com.demandtracker.entity.DemandaExecucaoTarefaRecurso;
+import com.demandtracker.entity.Perfil;
 import com.demandtracker.entity.Profissional;
 import com.demandtracker.exception.ResourceNotFoundException;
 import com.demandtracker.repository.DemandaExecucaoTarefaRecursoRepository;
 import com.demandtracker.repository.DemandaExecucaoTarefaRepository;
+import com.demandtracker.repository.PerfilRepository;
 import com.demandtracker.repository.ProfissionalRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ public class DemandaExecucaoTarefaRecursoService {
     private final DemandaExecucaoTarefaRecursoRepository repository;
     private final DemandaExecucaoTarefaRepository tarefaRepository;
     private final ProfissionalRepository profissionalRepository;
+    private final PerfilRepository perfilRepository;
 
     @Transactional(readOnly = true)
     public List<DemandaExecucaoTarefaRecursoDTO> findByDemandaExecucaoTarefaId(Long tarefaId) {
@@ -45,11 +48,17 @@ public class DemandaExecucaoTarefaRecursoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tarefa não encontrada com ID: " + dto.getDemandaExecucaoTarefaId()));
         Profissional profissional = profissionalRepository.findById(dto.getProfissionalId())
                 .orElseThrow(() -> new ResourceNotFoundException("Profissional não encontrado com ID: " + dto.getProfissionalId()));
+        Perfil perfil = dto.getPerfilId() != null
+                ? perfilRepository.findById(dto.getPerfilId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado com ID: " + dto.getPerfilId()))
+                : null;
 
         DemandaExecucaoTarefaRecurso r = new DemandaExecucaoTarefaRecurso();
         r.setDemandaExecucaoTarefa(tarefa);
         r.setProfissional(profissional);
+        r.setPerfil(perfil);
         r.setHorasPlanejadas(dto.getHorasPlanejadas());
+        r.setHorasExecutadas(dto.getHorasExecutadas());
         return DemandaExecucaoTarefaRecursoDTO.fromEntity(repository.save(r));
     }
 
@@ -62,7 +71,13 @@ public class DemandaExecucaoTarefaRecursoService {
                     .orElseThrow(() -> new ResourceNotFoundException("Profissional não encontrado com ID: " + dto.getProfissionalId()));
             r.setProfissional(p);
         }
+        if (dto.getPerfilId() != null) {
+            Perfil perfil = perfilRepository.findById(dto.getPerfilId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Perfil não encontrado com ID: " + dto.getPerfilId()));
+            r.setPerfil(perfil);
+        }
         if (dto.getHorasPlanejadas() != null) r.setHorasPlanejadas(dto.getHorasPlanejadas());
+        if (dto.getHorasExecutadas() != null) r.setHorasExecutadas(dto.getHorasExecutadas());
         return DemandaExecucaoTarefaRecursoDTO.fromEntity(repository.save(r));
     }
 

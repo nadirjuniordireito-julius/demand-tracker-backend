@@ -39,6 +39,7 @@ public class DemandaExecucaoGanttTarefaDTO {
 
     private BigDecimal percentualProgresso;
     private BigDecimal estimativaHoras;
+    private Integer sequencia;
 
     /** IDs das tarefas predecessoras (esta tarefa depende delas). */
     private List<Long> predecessorIds;

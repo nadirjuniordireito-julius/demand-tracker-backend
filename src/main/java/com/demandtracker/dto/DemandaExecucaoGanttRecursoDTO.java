@@ -16,5 +16,8 @@ public class DemandaExecucaoGanttRecursoDTO {
     private Long id;
     private Long profissionalId;
     private String nome;
+    private Long perfilId;
+    private String perfilNome;
     private BigDecimal horasPlanejadas;
+    private BigDecimal horasExecutadas;
 }

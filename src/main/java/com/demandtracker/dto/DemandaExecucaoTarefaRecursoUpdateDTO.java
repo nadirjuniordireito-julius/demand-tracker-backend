@@ -13,7 +13,11 @@ import java.math.BigDecimal;
 public class DemandaExecucaoTarefaRecursoUpdateDTO {
 
     private Long profissionalId;
+    private Long perfilId;
 
     @DecimalMin(value = "0.00")
     private BigDecimal horasPlanejadas;
+
+    @DecimalMin(value = "0.00")
+    private BigDecimal horasExecutadas;
 }
