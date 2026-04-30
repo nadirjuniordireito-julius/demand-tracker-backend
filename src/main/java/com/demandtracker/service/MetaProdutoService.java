@@ -3,6 +3,7 @@ package com.demandtracker.service;
 import com.demandtracker.dto.*;
 import com.demandtracker.entity.MetaProduto;
 import com.demandtracker.entity.ProjetoMeta;
+import com.demandtracker.entity.enums.StatusDemandaTecnica;
 import com.demandtracker.exception.BadRequestException;
 import com.demandtracker.exception.ResourceNotFoundException;
 import com.demandtracker.repository.MetaProdutoRepository;
@@ -17,8 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -265,5 +268,122 @@ public class MetaProdutoService {
         response.setTotalExecutadoProduto(totalExecutadoProduto);
         response.setTrimestres(itens);
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProdutoResumoDTO> getProdutoResumo(Long idMeta, Long idProduto) {
+        if (idMeta == null && idProduto == null) {
+            throw new BadRequestException("Informe ao menos um parâmetro: idMeta ou idProduto.");
+        }
+
+        List<MetaProduto> produtos;
+        if (idProduto != null) {
+            MetaProduto produto = metaProdutoRepository.findById(idProduto)
+                    .orElseThrow(() -> new ResourceNotFoundException("Produto da meta não encontrado com ID: " + idProduto));
+
+            if (idMeta != null && !idMeta.equals(produto.getProjetoMeta().getId())) {
+                throw new BadRequestException("O idProduto informado não pertence ao idMeta informado.");
+            }
+            produtos = List.of(produto);
+        } else {
+            produtos = metaProdutoRepository.findByProjetoMetaId(idMeta);
+        }
+
+        List<ProdutoResumoDTO> resultado = new ArrayList<>();
+        for (MetaProduto produto : produtos) {
+            resultado.add(montarProdutoResumo(produto));
+        }
+        return resultado;
+    }
+
+    private ProdutoResumoDTO montarProdutoResumo(MetaProduto produto) {
+        String situacaoProduto = "";
+        LocalDate inicio = produto.getDataInicio();
+        LocalDate fim = produto.getDataFim();
+        int mesesPrevistosExecucao = calcularMesesPrevistosExecucao(inicio, fim);
+
+        BigDecimal valorTotalOrcamento = calcularValorTotalOrcamento(produto);
+        BigDecimal valorTotalEmExecucao = termoPlanejamentoRepository.sumValorPlanejadoByMetaProdutoIdAndDemandaStatusIn(
+                produto.getId(),
+                List.of(StatusDemandaTecnica.E.getCodigo(), StatusDemandaTecnica.F.getCodigo())
+        );
+        BigDecimal valorTotalExecutado = termoEncerramentoRepository.sumValorExecutadoByMetaProdutoIdAndStatus(
+                produto.getId(),
+                StatusDemandaTecnica.G.getCodigo()
+        );
+
+        BigDecimal percentualExecucao = produto.getPercExecutado() != null
+                ? BigDecimal.valueOf(produto.getPercExecutado()).setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+
+        int mesesExecucao = calcularMesesExecucao(produto.getId());
+        
+        BigDecimal valorMediaEntregaPrevistaMensal = dividirPorMeses(valorTotalOrcamento, mesesPrevistosExecucao);
+        BigDecimal valorMediaEntregaRealMensal = dividirPorMeses(
+                valorTotalEmExecucao.add(valorTotalExecutado),
+                mesesExecucao
+        );
+
+        return new ProdutoResumoDTO(
+                produto.getProjetoMeta().getId(),
+                produto.getProjetoMeta().getCodigo(),
+                produto.getProjetoMeta().getNome(),
+                produto.getId(),
+                produto.getCodigo(),
+                produto.getNome(),
+                situacaoProduto,
+                inicio,
+                fim,
+                mesesPrevistosExecucao,
+                valorTotalOrcamento,
+                valorTotalEmExecucao.setScale(2, RoundingMode.HALF_UP),
+                valorTotalExecutado.setScale(2, RoundingMode.HALF_UP),
+                percentualExecucao,
+                valorMediaEntregaPrevistaMensal,
+                valorMediaEntregaRealMensal
+        );
+    }
+
+    private int calcularMesesPrevistosExecucao(LocalDate inicio, LocalDate fim) {
+        if (inicio == null || fim == null || fim.isBefore(inicio)) {
+            return 0;
+        }
+        return (int) ChronoUnit.MONTHS.between(
+                inicio.withDayOfMonth(1),
+                fim.withDayOfMonth(1)
+        ) + 1;
+    }
+
+    private int calcularMesesExecucao(Long metaProdutoId) {
+        LocalDateTime primeiraDataAbertura = termoPlanejamentoRepository
+                .findFirstDataAberturaByMetaProdutoId(metaProdutoId)
+                .orElse(null);
+        if (primeiraDataAbertura == null) {
+            return 0;
+        }
+
+        YearMonth inicioExecucao = YearMonth.from(primeiraDataAbertura);
+        YearMonth mesAtual = YearMonth.now();
+        if (inicioExecucao.isAfter(mesAtual)) {
+            return 0;
+        }
+
+        return (int) ChronoUnit.MONTHS.between(inicioExecucao, mesAtual) + 1;
+    }
+
+    private BigDecimal calcularValorTotalOrcamento(MetaProduto produto) {
+        if (produto.getValorUnitario() == null || produto.getQuantidade() == null) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return produto.getValorUnitario()
+                .multiply(BigDecimal.valueOf(produto.getQuantidade()))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal dividirPorMeses(BigDecimal valor, int meses) {
+        if (meses <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return valor.divide(BigDecimal.valueOf(meses), 2, RoundingMode.HALF_UP);
     }
 }

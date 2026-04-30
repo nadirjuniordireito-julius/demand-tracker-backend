@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/meta-produtos")
@@ -36,6 +37,14 @@ public class MetaProdutoController {
     @GetMapping("/{id}/evolucao-trimestral")
     public ResponseEntity<MetaProdutoEvolucaoTrimestralDTO> getEvolucaoTrimestral(@PathVariable Long id) {
         return ResponseEntity.ok(metaProdutoService.getEvolucaoTrimestral(id));
+    }
+
+    @GetMapping("/resumo")
+    public ResponseEntity<List<ProdutoResumoDTO>> getResumoProduto(
+            @RequestParam(required = false) Long idMeta,
+            @RequestParam(required = false) Long idProduto
+    ) {
+        return ResponseEntity.ok(metaProdutoService.getProdutoResumo(idMeta, idProduto));
     }
     
     @PostMapping

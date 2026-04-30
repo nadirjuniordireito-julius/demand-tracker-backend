@@ -19,6 +19,7 @@ public interface MetaProdutoRepository extends JpaRepository<MetaProduto, Long> 
 
     /** Retorna todos os produtos de todas as metas de um projeto. */
     List<MetaProduto> findByProjetoMetaProjetoId(Long projetoId);
+    List<MetaProduto> findByProjetoMetaId(Long projetoMetaId);
 
     Page<MetaProduto> findByProjetoMetaId(Long projetoMetaId, Pageable pageable);
     Page<MetaProduto> findByCodigoContainingIgnoreCase(String codigo, Pageable pageable);

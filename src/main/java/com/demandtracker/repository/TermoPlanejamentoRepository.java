@@ -30,12 +30,23 @@ public interface TermoPlanejamentoRepository extends JpaRepository<TermoPlanejam
 
     @Query("SELECT COALESCE(SUM(c.qtdeHora * c.valorHora), 0) FROM TermoPlanejamentoCusto c " +
             "JOIN c.termoPlanejamento te JOIN te.demandaTecnica d " +
+            "WHERE d.metaProduto.id = :metaProdutoId AND d.status IN :statusList")
+    BigDecimal sumValorPlanejadoByMetaProdutoIdAndDemandaStatusIn(
+            @Param("metaProdutoId") Long metaProdutoId,
+            @Param("statusList") java.util.List<String> statusList);
+
+    @Query("SELECT COALESCE(SUM(c.qtdeHora * c.valorHora), 0) FROM TermoPlanejamentoCusto c " +
+            "JOIN c.termoPlanejamento te JOIN te.demandaTecnica d " +
             "WHERE d.metaProduto.id = :metaProdutoId " +
             "AND te.dataAbertura >= :dataInicio AND te.dataAbertura <= :dataFim")
     BigDecimal sumValorPlanejadoByMetaProdutoIdAndDataAberturaBetween(
             @Param("metaProdutoId") Long metaProdutoId,
             @Param("dataInicio") LocalDateTime dataInicio,
             @Param("dataFim") LocalDateTime dataFim);
+
+    @Query("SELECT MIN(te.dataAbertura) FROM TermoPlanejamento te " +
+            "WHERE te.demandaTecnica.metaProduto.id = :metaProdutoId")
+    Optional<LocalDateTime> findFirstDataAberturaByMetaProdutoId(@Param("metaProdutoId") Long metaProdutoId);
 
     
 }
