@@ -26,7 +26,10 @@ public class ProfissionalCreateDTO {
     private Long projetoId;
 
     @NotNull(message = "Valor hora é obrigatório")
-    private BigDecimal valorHora;   
+    private BigDecimal valorHora;
+
+    @NotNull(message = "Custo total mensal é obrigatório")
+    private BigDecimal custoTotalMensal;
 
     @NotBlank(message = "Tipo de pessoa é obrigatório")
     @Size(max = 1, message = "Tipo de pessoa deve ter no máximo 1 caractere")

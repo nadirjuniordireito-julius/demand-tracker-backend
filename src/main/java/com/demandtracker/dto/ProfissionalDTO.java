@@ -18,6 +18,7 @@ public class ProfissionalDTO {
     private String tipoPessoa;
     private String documento;
     private BigDecimal valorHora;
+    private BigDecimal custoTotalMensal;
     private LocalDate dataInicioAtividade;
     private String funcao;
     private Long projetoId;
@@ -31,6 +32,7 @@ public class ProfissionalDTO {
         dto.setDocumento(profissional.getDocumento());
         dto.setNome(profissional.getNome());
         dto.setValorHora(profissional.getValorHora());
+        dto.setCustoTotalMensal(profissional.getCustoTotalMensal());
         dto.setDataInicioAtividade(profissional.getDataInicioAtividade());
         dto.setFuncao(profissional.getFuncao());
         if (profissional.getProjeto() != null) {

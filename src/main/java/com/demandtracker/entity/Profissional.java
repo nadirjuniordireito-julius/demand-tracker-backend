@@ -58,6 +58,13 @@ public class Profissional {
     private BigDecimal valorHora;
 
     /**
+     * valor do custo total mensal do profissional/empresa
+     * Not null, precision 10, scale 2
+     */
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal custoTotalMensal;
+
+    /**
      * data de inicio da atividade do profissional
      * Not null
      */

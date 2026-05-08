@@ -67,6 +67,7 @@ public class ProfissionalService {
         profissional.setTipoPessoa(dto.getTipoPessoa());
         profissional.setDocumento(dto.getDocumento());
         profissional.setValorHora(dto.getValorHora());
+        profissional.setCustoTotalMensal(dto.getCustoTotalMensal());
         profissional.setFuncao(dto.getFuncaoProfissional());
         profissional.setProjeto(projeto);
         profissional.setPerfil(perfil);
@@ -94,6 +95,9 @@ public class ProfissionalService {
         }
         if (dto.getValorHora() != null) {
             profissional.setValorHora(dto.getValorHora());
+        }
+        if (dto.getCustoTotalMensal() != null) {
+            profissional.setCustoTotalMensal(dto.getCustoTotalMensal());
         }
         if (dto.getProjetoId() != null) {
             Projeto projeto = projetoRepository.findById(dto.getProjetoId())

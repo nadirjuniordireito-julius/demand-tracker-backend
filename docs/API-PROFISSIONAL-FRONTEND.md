@@ -14,6 +14,7 @@ Documento para implementação do **CRUD de Profissional** no frontend, incluind
 | **documento**    | CPF (F) ou CNPJ (J) – **único** no sistema      |
 | **nome**         | Nome do profissional (até 500 caracteres)       |
 | **valorHora**    | Valor cobrado por hora (decimal)                |
+| **custoTotalMensal** | Custo total mensal do profissional/empresa (decimal, obrigatório) |
 | **dataInicioAtividade** | Data de início da atividade (ISO date)   |
 | **funcao**       | Função/cargo do profissional (opcional, máx. 255 caracteres) |
 | **projetoId**    | ID do projeto ao qual o profissional pertence   |
@@ -62,6 +63,7 @@ Corpo: objeto de **paginação** (Spring Page):
       "tipoPessoa": "F",
       "documento": "12345678901",
       "valorHora": 150.00,
+      "custoTotalMensal": 12000.00,
       "dataInicioAtividade": "2025-01-15",
       "funcao": "Desenvolvedor",
       "projetoId": 1,
@@ -119,6 +121,7 @@ Corpo: um **ProfissionalDTO** (mesmo formato de um item em `content` acima).
 | `tipoPessoa`          | string  | Sim         | Exatamente 1 caractere: `F` ou `J`      |
 | `documento`           | string  | Sim         | Não vazio; máx. 100 caracteres; **único** no sistema |
 | `valorHora`           | number  | Sim         | Decimal, > 0 (valor por hora)         |
+| `custoTotalMensal`    | number  | Sim         | Custo total mensal (decimal, precisão 10,2) |
 | `dataInicioAtividade` | string  | Sim         | Data no formato ISO: `YYYY-MM-DD`      |
 | `funcao`              | string  | Não         | Função/cargo; máx. 255 caracteres     |
 | `projetoId`           | long    | Sim         | ID de um projeto existente             |
@@ -130,6 +133,7 @@ Corpo: um **ProfissionalDTO** (mesmo formato de um item em `content` acima).
   "tipoPessoa": "F",
   "documento": "12345678901",
   "valorHora": 150.50,
+  "custoTotalMensal": 12000.00,
   "dataInicioAtividade": "2025-01-15",
   "funcao": "Desenvolvedor",
   "projetoId": 1
@@ -158,6 +162,7 @@ Corpo: **ProfissionalDTO** do profissional criado (incluindo `id` e `projeto`).
 | `tipoPessoa`          | string | Não         | 1 caractere: `F` ou `J`                     |
 | `documento`           | string | Não         | Máx. 100 caracteres; **único** (exceto o próprio registro) |
 | `valorHora`           | number | Não         | Decimal, > 0                                |
+| `custoTotalMensal`    | number | Não         | Custo total mensal (decimal)                |
 | `dataInicioAtividade` | string | Não         | ISO date: `YYYY-MM-DD`                      |
 | `funcao`              | string | Não         | Função/cargo; máx. 255 caracteres           |
 | `projetoId`           | long   | Não         | ID de projeto existente                     |
@@ -210,7 +215,10 @@ Corpo: **ProfissionalDTO** atualizado.
 4. **Valor hora**  
    Sempre numérico, maior que zero (duas casas decimais são suficientes).
 
-5. **Datas**  
+5. **Custo total mensal**  
+   Obrigatório na criação; na resposta sempre presente. Na edição é opcional (parcial). Duas casas decimais; ver também `docs/API-PROFISSIONAL-CUSTO-TOTAL-MENSAL-FRONTEND.md`.
+
+6. **Datas**  
    Sempre em formato ISO: `YYYY-MM-DD` (ex.: `2025-01-15`).
 
 ---
@@ -240,6 +248,7 @@ O backend retorna **400** com corpo no formato padrão de erro quando há falha 
 | Situação                    | Exemplo de `message` / uso de `errors`        |
 |----------------------------|-----------------------------------------------|
 | Campo obrigatório          | `errors.nome`: "Nome é obrigatório"           |
+| Custo total mensal ausente | `errors.custoTotalMensal`: "Custo total mensal é obrigatório" |
 | Tamanho máximo             | `errors.nome`: "Nome deve ter no máximo 500 caracteres" |
 | Documento duplicado       | `message`: "Já existe um profissional cadastrado com o documento informado: ..." |
 | Profissional não encontrado| `message`: "Profissional não encontrado com ID: ..." (404) |
@@ -263,6 +272,7 @@ interface ProfissionalDTO {
   tipoPessoa: string;           // "F" | "J"
   documento: string;
   valorHora: number;
+  custoTotalMensal: number;
   dataInicioAtividade: string; // "YYYY-MM-DD"
   funcao?: string | null;      // função/cargo (opcional)
   projetoId: number;
@@ -278,6 +288,7 @@ interface ProfissionalCreateDTO {
   tipoPessoa: string;           // "F" | "J"
   documento: string;
   valorHora: number;
+  custoTotalMensal: number;
   dataInicioAtividade: string; // "YYYY-MM-DD"
   funcao?: string | null;      // opcional; máx. 255 caracteres
   projetoId: number;
@@ -294,6 +305,7 @@ interface ProfissionalUpdateDTO {
   tipoPessoa?: string;
   documento?: string;
   valorHora?: number;
+  custoTotalMensal?: number;
   dataInicioAtividade?: string;
   funcao?: string | null;      // máx. 255 caracteres; enviar "" para limpar
   projetoId?: number;

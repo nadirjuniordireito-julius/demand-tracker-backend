@@ -319,10 +319,9 @@ public class ProjetoService {
         node.setNome(produto.getNome());
         node.setDescricao(produto.getDescricao());
 
-        /** 
+        // No semaforo, o inicio oficial do produto deve usar dataInicio planejada do MetaProduto.
+        // Usar dataPrimeiraEntrega desloca o periodo e impacta o nivel META (minInicio).
         node.setDataInicio(produto.getDataInicio());
-        **/
-        node.setDataInicio(produto.getDataPrimeiraEntrega());
         node.setDataFim(produto.getDataFim());
 
         if (produto.getValorUnitario() != null && produto.getQuantidade() != null) {

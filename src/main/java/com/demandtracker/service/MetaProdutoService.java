@@ -300,6 +300,10 @@ public class MetaProdutoService {
         String situacaoProduto = "";
         LocalDate inicio = produto.getDataInicio();
         LocalDate fim = produto.getDataFim();
+        LocalDateTime primeiraDataPlanejamento = termoPlanejamentoRepository
+                .findFirstDataAberturaByMetaProdutoId(produto.getId())
+                .orElse(null);
+        LocalDate inicioRealExecucao = primeiraDataPlanejamento != null ? primeiraDataPlanejamento.toLocalDate() : null;
         int mesesPrevistosExecucao = calcularMesesPrevistosExecucao(inicio, fim);
 
         BigDecimal valorTotalOrcamento = calcularValorTotalOrcamento(produto);
@@ -316,7 +320,7 @@ public class MetaProdutoService {
                 ? BigDecimal.valueOf(produto.getPercExecutado()).setScale(2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
-        int mesesExecucao = calcularMesesExecucao(produto.getId());
+        int mesesExecucao = calcularMesesExecucao(primeiraDataPlanejamento);
         
         BigDecimal valorMediaEntregaPrevistaMensal = dividirPorMeses(valorTotalOrcamento, mesesPrevistosExecucao);
         BigDecimal valorMediaEntregaRealMensal = dividirPorMeses(
@@ -333,6 +337,7 @@ public class MetaProdutoService {
                 produto.getNome(),
                 situacaoProduto,
                 inicio,
+                inicioRealExecucao,
                 fim,
                 mesesPrevistosExecucao,
                 valorTotalOrcamento,
@@ -354,10 +359,7 @@ public class MetaProdutoService {
         ) + 1;
     }
 
-    private int calcularMesesExecucao(Long metaProdutoId) {
-        LocalDateTime primeiraDataAbertura = termoPlanejamentoRepository
-                .findFirstDataAberturaByMetaProdutoId(metaProdutoId)
-                .orElse(null);
+    private int calcularMesesExecucao(LocalDateTime primeiraDataAbertura) {
         if (primeiraDataAbertura == null) {
             return 0;
         }

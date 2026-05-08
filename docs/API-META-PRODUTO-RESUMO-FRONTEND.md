@@ -65,11 +65,14 @@ O endpoint retorna sempre uma **lista**:
 ```ts
 interface ProdutoResumoDTO {
   idMeta: number;
-  meta: string;
+  codigoMeta: string;
+  nomeMeta: string;
   idProduto: number;
-  produto: string;
+  codigoProduto: string;
+  nomeProduto: string;
   situacao: string; // codigo de status do produto (ex.: "A", "C", etc.)
   inicioPrevisaoExecucao: string | null; // "YYYY-MM-DD"
+  inicioRealExecucao: string | null;     // "YYYY-MM-DD"
   fimPrevisaoExecucao: string | null;    // "YYYY-MM-DD"
   mesesPrevistosExecucao: number;
   valorTotalOrcamento: number;              // decimal(18,2)
@@ -88,38 +91,48 @@ interface ProdutoResumoDTO {
 1. `inicioPrevisaoExecucao`  
    = `MetaProduto.dataInicio`
 
-2. `fimPrevisaoExecucao`  
+2. `inicioRealExecucao`  
+   = primeira `dataAbertura` (apenas parte da data) encontrada em `TermoPlanejamento`
+   das demandas do produto.  
+   Se nao houver termo de planejamento para o produto, retorna `null`.
+
+3. `fimPrevisaoExecucao`  
    = `MetaProduto.dataFim`
 
-3. `mesesPrevistosExecucao`  
+4. `mesesPrevistosExecucao`  
    = quantidade de meses entre `inicioPrevisaoExecucao` e `fimPrevisaoExecucao` (contagem inclusiva por mes).  
    Se datas nulas ou invalidas (`fim < inicio`), retorna `0`.
 
-4. `valorTotalOrcamento`  
+5. `valorTotalOrcamento`  
    = `MetaProduto.valorUnitario * MetaProduto.quantidade`
 
-5. `valorTotalEmExecucao`  
+6. `valorTotalEmExecucao`  
    = soma de `(qtdeHora * valorHora)` de `TermoPlanejamentoCusto` das demandas do produto com status:
    - `E` (Em execucao)
    - `F` (Em encerramento)
 
-6. `valorTotalExecutado`  
+7. `valorTotalExecutado`  
    = soma de `(qtdeHora * valorHora)` de `TermoEncerramentoCusto` das demandas do produto com status:
    - `G` (Encerrada)
 
-7. `percentualExecucao`  
+8. `percentualExecucao`  
    = `MetaProduto.percExecutado` (formatado em decimal com 2 casas).  
    Exemplo: `35` -> `35.00`.
 
-8. `valorMediaEntregaPrevistaMensal`  
+9. `valorMediaEntregaPrevistaMensal`  
    = `valorTotalOrcamento / mesesPrevistosExecucao`
 
-9. `valorMediaEntregaRealMensal`  
-   = `(valorTotalEmExecucao + valorTotalExecutado) / mesesPrevistosExecucao`
+10. `valorMediaEntregaRealMensal`  
+   = `(valorTotalEmExecucao + valorTotalExecutado) / mesesExecucao`
+
+11. `mesesExecucao` (regra interna de calculo, nao retornado no DTO)  
+   = quantidade de meses entre o ano/mes da primeira `dataAbertura` de `TermoPlanejamento`
+   e o ano/mes atual (contagem inclusiva).  
+   Se nao houver termo de planejamento, considera `0`.
 
 ### Regra de divisao por zero
 
-Quando `mesesPrevistosExecucao <= 0`, as medias retornam `0.00`.
+Quando o divisor for `<= 0`, a media correspondente retorna `0.00`.
 
 ---
 
@@ -153,11 +166,14 @@ GET /api/meta-produtos/resumo?idMeta=10&idProduto=35
 [
   {
     "idMeta": 10,
-    "meta": "Meta de Modernizacao",
+    "codigoMeta": "M001",
+    "nomeMeta": "Meta de Modernizacao",
     "idProduto": 35,
-    "produto": "Painel Gerencial",
+    "codigoProduto": "P001",
+    "nomeProduto": "Painel Gerencial",
     "situacao": "A",
     "inicioPrevisaoExecucao": "2026-01-01",
+    "inicioRealExecucao": "2026-02-15",
     "fimPrevisaoExecucao": "2026-12-31",
     "mesesPrevistosExecucao": 12,
     "valorTotalOrcamento": 120000.00,
@@ -169,11 +185,14 @@ GET /api/meta-produtos/resumo?idMeta=10&idProduto=35
   },
   {
     "idMeta": 10,
-    "meta": "Meta de Modernizacao",
+    "codigoMeta": "M001",
+    "nomeMeta": "Meta de Modernizacao",
     "idProduto": 36,
-    "produto": "Modulo Mobile",
+    "codigoProduto": "P002",
+    "nomeProduto": "Modulo Mobile",
     "situacao": "A",
     "inicioPrevisaoExecucao": "2026-02-01",
+    "inicioRealExecucao": null,
     "fimPrevisaoExecucao": "2026-08-31",
     "mesesPrevistosExecucao": 7,
     "valorTotalOrcamento": 70000.00,
@@ -239,6 +258,33 @@ Mensagem esperada (resumo):
 - `situacao` e um codigo curto (string de 1 caractere).
 - Campos monetarios ja retornam com 2 casas decimais.
 - Datas no formato ISO (`YYYY-MM-DD`).
+- Novo campo: `inicioRealExecucao` pode vir `null` (quando nao houver termo de planejamento).
+
+## 10. Ajuste necessario no Frontend (DTO local)
+
+Se o frontend possui tipagem local para esse retorno, atualize para:
+
+```ts
+export interface ProdutoResumoDTO {
+  idMeta: number;
+  codigoMeta: string;
+  nomeMeta: string;
+  idProduto: number;
+  codigoProduto: string;
+  nomeProduto: string;
+  situacao: string;
+  inicioPrevisaoExecucao: string | null;
+  inicioRealExecucao: string | null; // novo campo
+  fimPrevisaoExecucao: string | null;
+  mesesPrevistosExecucao: number;
+  valorTotalOrcamento: number;
+  valorTotalEmExecucao: number;
+  valorTotalExecutado: number;
+  percentualExecucao: number;
+  valorMediaEntregaPrevistaMensal: number;
+  valorMediaEntregaRealMensal: number;
+}
+```
 
 ---
 

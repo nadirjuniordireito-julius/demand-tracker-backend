@@ -27,6 +27,7 @@ public class DemandaTecnicaService {
     private final UsuarioRepository usuarioRepository;
     private final MetaProdutoRepository metaProdutoRepository;
     private final TermoEncerramentoRepository termoEncerramentoRepository;
+    private final TermoPlanejamentoRepository termoPlanejamentoRepository;
     private final TermoAberturaService termoAberturaService;
     
     @Transactional(readOnly = true)
@@ -92,6 +93,34 @@ public class DemandaTecnicaService {
             dto.setTotalExecutadoProduto(total != null ? total : BigDecimal.ZERO);
         }
         return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<DemandaTecnicaProdutoViewDTO> findViewByProdutoId(Long idProduto) {
+        if (idProduto == null) {
+            throw new BadRequestException("idProduto é obrigatório.");
+        }
+        if (!metaProdutoRepository.existsById(idProduto)) {
+            throw new ResourceNotFoundException("Produto não encontrado com ID: " + idProduto);
+        }
+
+        return demandaRepository.findByMetaProdutoId(idProduto).stream()
+                .sorted(java.util.Comparator.comparing(DemandaTecnica::getCodigo, java.util.Comparator.nullsLast(String::compareToIgnoreCase)))
+                .map(d -> {
+                    BigDecimal totalPrevisto = termoPlanejamentoRepository
+                            .sumValorPlanejadoyDemandaTecnicaId(d.getId());
+                    BigDecimal totalExecutado = termoEncerramentoRepository
+                            .sumValorExecutadoByDemandaTecnicaId(d.getId());
+                    return new DemandaTecnicaProdutoViewDTO(
+                            d.getCodigo(),
+                            d.getTermoPlanejamento() != null ? d.getTermoPlanejamento().getDataInicioExecucao() : null,
+                            d.getNome(),
+                            d.getStatus(),
+                            totalPrevisto != null ? totalPrevisto : BigDecimal.ZERO,
+                            totalExecutado != null ? totalExecutado : BigDecimal.ZERO
+                    );
+                })
+                .toList();
     }
     
     @Transactional

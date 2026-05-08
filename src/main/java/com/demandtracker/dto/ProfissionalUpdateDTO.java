@@ -21,6 +21,8 @@ public class ProfissionalUpdateDTO {
 
     private BigDecimal valorHora;
 
+    private BigDecimal custoTotalMensal;
+
     @Size(max = 1, message = "Tipo de pessoa deve ter no máximo 1 caractere")
     private String tipoPessoa;
 

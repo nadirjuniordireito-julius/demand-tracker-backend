@@ -19,6 +19,7 @@ public class ProdutoResumoDTO {
     private String nomeProduto;
     private String situacao;
     private LocalDate inicioPrevisaoExecucao;
+    private LocalDate inicioRealExecucao;
     private LocalDate fimPrevisaoExecucao;
     private Integer mesesPrevistosExecucao;
     private BigDecimal valorTotalOrcamento;

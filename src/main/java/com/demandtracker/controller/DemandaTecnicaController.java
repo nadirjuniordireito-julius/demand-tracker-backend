@@ -37,6 +37,11 @@ public class DemandaTecnicaController {
         return ResponseEntity.ok(demandaService.findById(id));
     }
 
+    @GetMapping("/produto/{idProduto}/view")
+    public ResponseEntity<List<DemandaTecnicaProdutoViewDTO>> findViewByProduto(@PathVariable Long idProduto) {
+        return ResponseEntity.ok(demandaService.findViewByProdutoId(idProduto));
+    }
+
     /**
      * Timeline do rastro da demanda técnica (criação, abertura, assinaturas, planejamento, encerramento).
      * GET /api/demandas/{id}/timeline

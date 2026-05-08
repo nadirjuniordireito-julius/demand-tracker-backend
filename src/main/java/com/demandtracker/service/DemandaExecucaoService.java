@@ -124,9 +124,15 @@ public class DemandaExecucaoService {
         YearMonth inicioYm = YearMonth.from(inicio);
         YearMonth fimYm = YearMonth.from(hoje);
 
-        Map<YearMonth, BigDecimal> remuneracaoPorMes = new HashMap<>();
+        // Fonte oficial da remuneração mensal: tabela profissional_custo_mensal por (profissionalId, ano, mes).
+        // Se houver duplicidade indevida no mesmo mês, usa o registro mais recente (maior id).
+        Map<YearMonth, ProfissionalCustoMensal> custoMensalPorMes = new HashMap<>();
         for (ProfissionalCustoMensal c : profissionalCustoMensalRepository.findByProfissionalId(profissionalId)) {
-            remuneracaoPorMes.put(YearMonth.of(c.getAno(), c.getMes()), safe(c.getCustoTotal()));
+            YearMonth ym = YearMonth.of(c.getAno(), c.getMes());
+            ProfissionalCustoMensal atual = custoMensalPorMes.get(ym);
+            if (atual == null || (c.getId() != null && atual.getId() != null && c.getId() > atual.getId())) {
+                custoMensalPorMes.put(ym, c);
+            }
         }
 
         Map<YearMonth, BigDecimal> horasExecutadasPorMes = new HashMap<>();
@@ -165,7 +171,12 @@ public class DemandaExecucaoService {
             BigDecimal horasPrevistas = BigDecimal.valueOf(diasUteis).multiply(BigDecimal.valueOf(8)).setScale(2, RoundingMode.HALF_UP);
 
             BigDecimal horasExec = safe(horasExecutadasPorMes.get(cursor)).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal remuneracao = safe(remuneracaoPorMes.get(cursor)).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal remuneracao = BigDecimal.ZERO;
+            ProfissionalCustoMensal custoMes = custoMensalPorMes.get(cursor);
+            if (custoMes != null) {
+                remuneracao = safe(custoMes.getCustoTotal());
+            }
+            remuneracao = remuneracao.setScale(2, RoundingMode.HALF_UP);
             BigDecimal valorExecucao = safe(valorExecucaoPorMes.get(cursor)).setScale(2, RoundingMode.HALF_UP);
 
             out.add(new ExecucaoProfissionalDTO(
