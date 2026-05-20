@@ -32,6 +32,26 @@ public enum StatusDemandaTecnica {
         return this == G;
     }
 
+    /** Permite criar o Termo de Planejamento (demanda em abertura ou já aberta/assinada). */
+    public boolean permiteCriacaoTermoPlanejamento() {
+        return this == B || this == C;
+    }
+
+    /** Permite alterar o Termo de Planejamento (rascunho ou em planejamento). */
+    public boolean permiteEdicaoTermoPlanejamento() {
+        return this == B || this == C || this == D;
+    }
+
+    /** Permite finalizar o planejamento (PDF) ou assinar digitalmente o Termo de Planejamento. */
+    public boolean permiteFinalizacaoTermoPlanejamento() {
+        return this == C || this == D || this == E;
+    }
+
+    /** Permite enviar ou substituir o PDF do Termo de Planejamento. */
+    public boolean permiteEnvioDocumentoPlanejamento() {
+        return this == B || this == C || this == D || this == E;
+    }
+
     public static StatusDemandaTecnica fromCodigo(String codigo) {
         if (codigo == null || codigo.isBlank()) return null;
         String c = codigo.trim().toUpperCase();

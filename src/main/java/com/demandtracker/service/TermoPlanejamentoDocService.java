@@ -40,6 +40,7 @@ public class TermoPlanejamentoDocService {
         // Valida se o termo existe
         TermoPlanejamento termoPlanejamento = termoPlanejamentoRepository.findById(dto.getTermoPlanejamentoId())
                 .orElseThrow(() -> new RuntimeException("Termo de Planejamento não encontrado com ID: " + dto.getTermoPlanejamentoId()));
+        termoPlanejamentoService.validarEnvioDocumentoPlanejamentoPermitida(dto.getTermoPlanejamentoId(), false);
 
         // Valida se já existe documento para este termo
         if (repository.existsByTermoPlanejamentoId(dto.getTermoPlanejamentoId())) {
@@ -63,6 +64,7 @@ public class TermoPlanejamentoDocService {
 
         // Salva
         TermoPlanejamentoDoc saved = repository.save(doc);
+        termoPlanejamentoService.finalizarPlanejamentoComDocumento(dto.getTermoPlanejamentoId());
         return toResponseDTO(saved);
     }
 
@@ -123,6 +125,7 @@ public class TermoPlanejamentoDocService {
     public TermoPlanejamentoDocResponseDTO update(Long id, TermoPlanejamentoDocUpdateDTO dto) throws IOException {
         TermoPlanejamentoDoc doc = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Documento não encontrado com ID: " + id));
+        termoPlanejamentoService.validarEnvioDocumentoPlanejamentoPermitida(doc.getTermoPlanejamento().getId(), true);
 
         if (dto.getDataAssinatura() != null) {
             doc.setDataAssinatura(dto.getDataAssinatura());
@@ -140,6 +143,7 @@ public class TermoPlanejamentoDocService {
         }
 
         TermoPlanejamentoDoc updated = repository.save(doc);
+        termoPlanejamentoService.finalizarPlanejamentoComDocumento(doc.getTermoPlanejamento().getId());
         return toResponseDTO(updated);
     }
 
@@ -148,9 +152,9 @@ public class TermoPlanejamentoDocService {
      */
     @Transactional
     public void delete(Long id) {
-        if (!repository.existsById(id)) {
-            throw new RuntimeException("Documento não encontrado com ID: " + id);
-        }
+        TermoPlanejamentoDoc doc = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Documento não encontrado com ID: " + id));
+        termoPlanejamentoService.validarExclusaoDocumentoPlanejamentoPermitida(doc.getTermoPlanejamento().getId());
         repository.deleteById(id);
     }
 

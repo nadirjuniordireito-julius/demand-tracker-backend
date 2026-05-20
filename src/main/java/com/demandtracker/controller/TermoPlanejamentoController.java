@@ -35,7 +35,11 @@ public class TermoPlanejamentoController {
     
     @GetMapping("/demanda/{demandaId}")
     public ResponseEntity<TermoPlanejamentoDTO> findByDemandaId(@PathVariable Long demandaId) {
-        return ResponseEntity.ok(termoService.findByDemandaId(demandaId));
+        TermoPlanejamentoDTO dto = termoService.findByDemandaId(demandaId);
+        if (dto == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(dto);
     }
     
     @PostMapping

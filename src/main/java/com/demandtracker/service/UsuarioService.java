@@ -57,7 +57,7 @@ public class UsuarioService {
     public UsuarioDTO create(UsuarioCreateDTO dto) {
         Usuario usuario = new Usuario();
         usuario.setNome(dto.getNome());
-        usuario.setEmail(dto.getNome().toLowerCase());
+        usuario.setEmail(dto.getEmail());
         String encodedPassword = passwordEncoder.encode(dto.getPassword());
         usuario.setPassword(encodedPassword);
         usuario.setPerfil(dto.getPerfil());
@@ -85,7 +85,10 @@ public class UsuarioService {
         if (dto.getStatus() != null) {
             usuario.setStatus(dto.getStatus());
         }
-        
+        if (dto.getEmail() != null) {
+            usuario.setEmail(dto.getEmail());
+        }
+
         Usuario saved = usuarioRepository.save(usuario);
         return UsuarioDTO.fromEntity(saved);
     }

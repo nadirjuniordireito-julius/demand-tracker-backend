@@ -248,6 +248,11 @@ public class DemandaExecucaoService {
             throw new BadRequestException("Demanda técnica ID " + dto.getDemandaTecnicaId()
                     + " não possui Termo de Planejamento para definir datas de execução.");
         }
+        if (!StatusDemandaTecnica.E.getCodigo().equals(demanda.getStatus())) {
+            throw new BadRequestException(
+                    "Não é permitido iniciar a execução da demanda: o Termo de Planejamento deve estar assinado "
+                            + "(status da demanda 'E' - Em execução). Status atual: " + demanda.getStatus() + ".");
+        }
 
         Usuario usuario = dto.getUsuarioId() != null
                 ? usuarioRepository.findById(dto.getUsuarioId()).orElse(null)

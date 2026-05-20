@@ -24,6 +24,7 @@ public class ProfissionalDTO {
     private Long projetoId;
     private ProjetoDTO projeto;
     private Long perfilId;
+    private String perfilNome;
 
     public static ProfissionalDTO fromEntity(Profissional profissional) {
         ProfissionalDTO dto = new ProfissionalDTO();
@@ -41,6 +42,7 @@ public class ProfissionalDTO {
         }
         if (profissional.getPerfil() != null) {
             dto.setPerfilId(profissional.getPerfil().getId());
+            dto.setPerfilNome(profissional.getPerfil().getNome());
         }
         return dto;
     }

@@ -10,6 +10,7 @@ import com.demandtracker.repository.ProfissionalCustoMensalRepository;
 import com.demandtracker.repository.ProfissionalRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,18 +24,8 @@ public class ProfissionalCustoMensalService {
 
     @Transactional(readOnly = true)
     public Page<ProfissionalCustoMensalDTO> findAll(Long profissionalId, Integer ano, Integer mes, Pageable pageable) {
-        Page<ProfissionalCustoMensal> page;
-        if (profissionalId != null && ano != null && mes != null) {
-            page = repository.findByProfissionalIdAndAnoAndMes(profissionalId, ano, mes, pageable);
-        } else if (profissionalId != null) {
-            page = repository.findByProfissionalId(profissionalId, pageable);
-        } else if (ano != null) {
-            page = repository.findByAno(ano, pageable);
-        } else if (mes != null) {
-            page = repository.findByMes(mes, pageable);
-        } else {
-            page = repository.findAll(pageable);
-        }
+        Pageable pageRequest = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        Page<ProfissionalCustoMensal> page = repository.findAllFiltered(profissionalId, ano, mes, pageRequest);
         return page.map(ProfissionalCustoMensalDTO::fromEntity);
     }
 
