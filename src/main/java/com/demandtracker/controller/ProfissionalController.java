@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/profissionais")
 @RequiredArgsConstructor
@@ -28,6 +30,17 @@ public class ProfissionalController {
     @GetMapping("/{id}")
     public ResponseEntity<ProfissionalDTO> findById(@PathVariable Long id) {
         return ResponseEntity.ok(profissionalService.findById(id));
+    }
+
+    /**
+     * Análise mensal resumida: horas executadas rateadas por dias úteis, valor por perfil e custo mensal.
+     * GET /api/profissionais/{id}/analise-resumida?demandaExecucaoId={opcional}
+     */
+    @GetMapping("/{id}/analise-resumida")
+    public ResponseEntity<List<ProfissionalAnaliseResumidaDTO>> getAnaliseResumida(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long demandaExecucaoId) {
+        return ResponseEntity.ok(profissionalService.getAnaliseResumida(id, demandaExecucaoId));
     }
 
     @PostMapping

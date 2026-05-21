@@ -14,4 +14,7 @@ public interface DemandaExecucaoTarefaRecursoRepository extends JpaRepository<De
     List<DemandaExecucaoTarefaRecurso> findByDemandaExecucaoTarefa_DemandaExecucaoId(Long demandaExecucaoId);
 
     List<DemandaExecucaoTarefaRecurso> findByProfissionalId(Long profissionalId);
+
+    List<DemandaExecucaoTarefaRecurso> findByProfissionalIdAndDemandaExecucaoTarefa_DemandaExecucaoId(
+            Long profissionalId, Long demandaExecucaoId);
 }
