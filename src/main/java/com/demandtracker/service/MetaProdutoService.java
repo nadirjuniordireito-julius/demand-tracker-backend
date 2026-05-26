@@ -320,6 +320,14 @@ public class MetaProdutoService {
                 ? BigDecimal.valueOf(produto.getPercExecutado()).setScale(2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
+        BigDecimal percentualExecutado = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        if (valorTotalOrcamento != null && valorTotalOrcamento.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal executado = valorTotalExecutado != null ? valorTotalExecutado : BigDecimal.ZERO;
+            percentualExecutado = executado
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(valorTotalOrcamento, 2, RoundingMode.HALF_UP);
+        }
+
         int mesesExecucao = calcularMesesExecucao(primeiraDataPlanejamento);
         
         BigDecimal valorMediaEntregaPrevistaMensal = dividirPorMeses(valorTotalOrcamento, mesesPrevistosExecucao);
@@ -343,6 +351,7 @@ public class MetaProdutoService {
                 valorTotalOrcamento,
                 valorTotalEmExecucao.setScale(2, RoundingMode.HALF_UP),
                 valorTotalExecutado.setScale(2, RoundingMode.HALF_UP),
+                percentualExecutado,
                 percentualExecucao,
                 valorMediaEntregaPrevistaMensal,
                 valorMediaEntregaRealMensal

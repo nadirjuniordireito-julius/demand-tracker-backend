@@ -429,11 +429,7 @@ public class ProjetoService {
             return SemaforoStatus.CINZA;
         }
 
-        System.out.println( "produto: "+produto.getCodigo());
-        System.out.println( "datainicio: "+produto.getDataInicio());
-        System.out.println( "getDataPrimeiraEntrega: "+produto.getDataPrimeiraEntrega());
-        System.out.println( "getIntervaloEntregaEmMeses: "+produto.getIntervaloEntregaEmMeses());
-
+     
 
         Integer percExec = produto.getPercExecutado();
         int perc = percExec != null ? percExec : 0;

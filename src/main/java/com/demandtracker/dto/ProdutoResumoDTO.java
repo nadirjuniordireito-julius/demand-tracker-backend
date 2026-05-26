@@ -25,6 +25,7 @@ public class ProdutoResumoDTO {
     private BigDecimal valorTotalOrcamento;
     private BigDecimal valorTotalEmExecucao;
     private BigDecimal valorTotalExecutado;
+    private BigDecimal percentualExecutado;
     private BigDecimal percentualExecucao;
     private BigDecimal valorMediaEntregaPrevistaMensal;
     private BigDecimal valorMediaEntregaRealMensal;

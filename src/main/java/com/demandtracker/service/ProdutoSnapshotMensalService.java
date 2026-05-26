@@ -462,6 +462,7 @@ public class ProdutoSnapshotMensalService {
         resumo.setValorTotalEmExecucao(valorTotalEmExecucao.setScale(2, RoundingMode.HALF_UP));
         resumo.setValorTotalExecutado(valorTotalExecutado.setScale(2, RoundingMode.HALF_UP));
         resumo.setPercentualExecucao(percentualExecucao);
+        resumo.setPercentualExecutado(percentualExecucao);
         resumo.setValorMediaEntregaPrevistaMensal(valorMediaEntregaPrevistaMensal);
         resumo.setValorMediaEntregaRealMensal(valorMediaEntregaRealMensal);
         return resumo;
