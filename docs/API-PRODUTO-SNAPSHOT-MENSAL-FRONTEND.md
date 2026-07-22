@@ -157,6 +157,10 @@ Status disponíveis: `ABERTA`, `EM_ANDAMENTO`, `CONCLUIDA`, `CANCELADA`.
 
 `GET /api/produtos-snapshots-mensais/relatorio-gestor?ano={ano}&mes={mes}&projetoId={opcional}`
 
+`GET /api/produtos-snapshots-mensais/relatorio-gestor/ultimo?projetoId={id}`
+
+Retorna o relatório gerencial do **último período com snapshot** no projeto (`ano`/`mes` mais recentes entre todos os produtos). Se o projeto ainda não tiver snapshot, usa **mês/ano atual**. `projetoId` é **obrigatório**. Resposta idêntica ao endpoint acima (`ProdutoSnapshotRelatorioGestorDTO`).
+
 Resposta `200 OK` com `ProdutoSnapshotRelatorioGestorDTO`:
 
 ```ts
@@ -172,6 +176,8 @@ interface ProdutoSnapshotRelatorioGestorDTO {
 ```
 
 O campo `produtosCriticos` é uma sublista de `produtos` priorizada para destaque (status `R`, ou `A` com ações vencidas).
+
+As listas `produtos` e `produtosCriticos` vêm ordenadas por `codigoMeta` e, em seguida, `codigoProduto`, com comparação **hierárquica** (segmentos separados por `.` comparados numericamente quando possível; ex.: 1.1, 1.2, 1.10, 2.1). Códigos nulos ao final. `acoesVencidas` permanece ordenada por `prazo` ascendente; cada item inclui `metaProdutoId`, `codigoProduto`, `descricaoProduto`, `projetoMetaId`, `codigoMeta` e `descricaoMeta` do snapshot vinculado.
 
 ---
 
@@ -220,6 +226,12 @@ interface ProdutoSnapshotAcaoDTO {
   observacaoStatus?: string | null;
   dataCriacao: string;
   dataUpdate: string;
+  metaProdutoId?: number | null;
+  codigoProduto?: string | null;
+  descricaoProduto?: string | null;
+  projetoMetaId?: number | null;
+  codigoMeta?: string | null;
+  descricaoMeta?: string | null;
 }
 
 interface ProdutoSnapshotRelatorioGestorItemDTO {

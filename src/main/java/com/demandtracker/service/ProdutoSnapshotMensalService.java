@@ -15,7 +15,9 @@ import com.demandtracker.exception.ResourceNotFoundException;
 import com.demandtracker.repository.MetaProdutoRepository;
 import com.demandtracker.repository.ProdutoSnapshotAcaoRepository;
 import com.demandtracker.repository.ProdutoSnapshotMensalRepository;
+import com.demandtracker.repository.ProjetoRepository;
 import com.demandtracker.repository.UsuarioRepository;
+import com.demandtracker.util.CodigoHierarquicoComparator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,9 +35,11 @@ import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -60,6 +64,7 @@ public class ProdutoSnapshotMensalService {
     private final ProdutoSnapshotMensalRepository snapshotRepository;
     private final ProdutoSnapshotAcaoRepository acaoRepository;
     private final MetaProdutoRepository metaProdutoRepository;
+    private final ProjetoRepository projetoRepository;
     private final UsuarioRepository usuarioRepository;
     private final MetaProdutoService metaProdutoService;
     private final TermoPlanejamentoRepository termoPlanejamentoRepository;
@@ -266,6 +271,30 @@ public class ProdutoSnapshotMensalService {
     // ---------------------------------------------------------------------
 
     @Transactional(readOnly = true)
+    public ProdutoSnapshotRelatorioGestorDTO getUltimoRelatorioGestor(Long projetoId) {
+        if (projetoId == null) {
+            throw new BadRequestException("projetoId é obrigatório.");
+        }
+        projetoRepository.findById(projetoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Projeto não encontrado com ID: " + projetoId));
+
+        Optional<ProdutoSnapshotMensal> ultimoSnapshot = snapshotRepository
+                .findTopByMetaProduto_ProjetoMeta_Projeto_IdOrderByAnoDescMesDesc(projetoId);
+
+        Integer ano;
+        Integer mes;
+        if (ultimoSnapshot.isPresent()) {
+            ano = ultimoSnapshot.get().getAno();
+            mes = ultimoSnapshot.get().getMes();
+        } else {
+            YearMonth ym = YearMonth.now();
+            ano = ym.getYear();
+            mes = ym.getMonthValue();
+        }
+        return getRelatorioGestor(ano, mes, projetoId);
+    }
+
+    @Transactional(readOnly = true)
     public ProdutoSnapshotRelatorioGestorDTO getRelatorioGestor(Integer ano, Integer mes, Long projetoId) {
         if (ano == null || mes == null) {
             throw new BadRequestException("Ano e mês são obrigatórios para o relatório gerencial.");
@@ -291,6 +320,12 @@ public class ProdutoSnapshotMensalService {
                     hoje
             ));
         }
+
+        itens.sort(Comparator
+                .comparing(ProdutoSnapshotRelatorioGestorItemDTO::getCodigoMeta,
+                        Comparator.nullsLast(CodigoHierarquicoComparator.INSTANCE))
+                .thenComparing(ProdutoSnapshotRelatorioGestorItemDTO::getCodigoProduto,
+                        Comparator.nullsLast(CodigoHierarquicoComparator.INSTANCE)));
 
         ProdutoSnapshotRelatorioGestorResumoDTO resumo = montarResumoRelatorio(itens);
 

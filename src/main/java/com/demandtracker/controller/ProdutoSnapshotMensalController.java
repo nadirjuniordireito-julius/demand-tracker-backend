@@ -21,6 +21,13 @@ public class ProdutoSnapshotMensalController {
 
     // ------------- Relatório gerencial (precede mapeamentos com {id}) -------------
 
+    @GetMapping("/relatorio-gestor/ultimo")
+    public ResponseEntity<ProdutoSnapshotRelatorioGestorDTO> getUltimoRelatorioGestor(
+            @RequestParam Long projetoId
+    ) {
+        return ResponseEntity.ok(service.getUltimoRelatorioGestor(projetoId));
+    }
+
     @GetMapping("/relatorio-gestor")
     public ResponseEntity<ProdutoSnapshotRelatorioGestorDTO> getRelatorioGestor(
             @RequestParam Integer ano,

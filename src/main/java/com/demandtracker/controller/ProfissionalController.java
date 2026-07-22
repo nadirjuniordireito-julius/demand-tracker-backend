@@ -43,6 +43,17 @@ public class ProfissionalController {
         return ResponseEntity.ok(profissionalService.getAnaliseResumida(id, demandaExecucaoId));
     }
 
+    /**
+     * Demandas técnicas em que o profissional foi alocado (execução real), com horas, período
+     * e resumo mensal agregado (custos de perfil e mensal).
+     * GET /api/profissionais/{id}/demandas-tecnicas
+     */
+    @GetMapping("/{id}/demandas-tecnicas")
+    public ResponseEntity<ProfissionalDemandasTecnicasResponseDTO> getDemandasTecnicasAlocadas(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(profissionalService.getDemandasTecnicasAlocadas(id));
+    }
+
     @PostMapping
     public ResponseEntity<ProfissionalDTO> create(@Valid @RequestBody ProfissionalCreateDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(profissionalService.create(dto));

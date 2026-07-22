@@ -3,9 +3,15 @@ package com.demandtracker.service;
 import com.demandtracker.dto.ProfissionalAnaliseResumidaDTO;
 import com.demandtracker.dto.ProfissionalCreateDTO;
 import com.demandtracker.dto.ProfissionalDTO;
+import com.demandtracker.dto.ProfissionalDemandaTecnicaDTO;
+import com.demandtracker.dto.ProfissionalDemandaTecnicaMensalDTO;
+import com.demandtracker.dto.ProfissionalDemandaTecnicaResumoMensalDTO;
+import com.demandtracker.dto.ProfissionalDemandasTecnicasResponseDTO;
 import com.demandtracker.dto.ProfissionalUpdateDTO;
+import com.demandtracker.entity.DemandaExecucao;
 import com.demandtracker.entity.DemandaExecucaoTarefa;
 import com.demandtracker.entity.DemandaExecucaoTarefaRecurso;
+import com.demandtracker.entity.DemandaTecnica;
 import com.demandtracker.entity.Profissional;
 import com.demandtracker.entity.ProfissionalCustoMensal;
 import com.demandtracker.entity.Projeto;
@@ -29,6 +35,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -266,6 +273,263 @@ public class ProfissionalService {
             cursor = cursor.plusMonths(1);
         }
         return resultado;
+    }
+
+    /**
+     * Lista as demandas técnicas em que o profissional foi alocado (recursos de execução),
+     * com totais de horas (planejadas e executadas) na DT, período das tarefas e rateio mensal
+     * por capacidade (dias úteis × 8) com teto das horas lançadas, mais resumo mensal agregado
+     * com custo de perfil e custo mensal lançado.
+     */
+    @Transactional(readOnly = true)
+    public ProfissionalDemandasTecnicasResponseDTO getDemandasTecnicasAlocadas(Long profissionalId) {
+        Profissional profissional = profissionalRepository.findById(profissionalId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profissional não encontrado com ID: " + profissionalId));
+
+        Map<YearMonth, ProfissionalCustoMensal> custoMensalPorMes = new HashMap<>();
+        for (ProfissionalCustoMensal c : profissionalCustoMensalRepository.findByProfissionalId(profissionalId)) {
+            YearMonth ym = YearMonth.of(c.getAno(), c.getMes());
+            ProfissionalCustoMensal atual = custoMensalPorMes.get(ym);
+            if (atual == null || (c.getId() != null && atual.getId() != null && c.getId() > atual.getId())) {
+                custoMensalPorMes.put(ym, c);
+            }
+        }
+
+        BigDecimal valorPerfil = (profissional.getPerfil() != null)
+                ? safe(profissional.getPerfil().getValor())
+                : BigDecimal.ZERO;
+
+        List<DemandaExecucaoTarefaRecurso> recursos =
+                demandaExecucaoTarefaRecursoRepository.findByProfissionalIdWithDemandaTecnica(profissionalId);
+
+        LocalDate minInicio = null;
+        LocalDate maxFim = null;
+        for (DemandaExecucaoTarefaRecurso recurso : recursos) {
+            LocalDate inicio = resolveInicioTarefa(recurso);
+            LocalDate fim = resolveFimTarefa(recurso);
+            if (inicio == null || fim == null || fim.isBefore(inicio)) {
+                continue;
+            }
+            if (minInicio == null || inicio.isBefore(minInicio)) {
+                minInicio = inicio;
+            }
+            if (maxFim == null || fim.isAfter(maxFim)) {
+                maxFim = fim;
+            }
+        }
+
+        Set<LocalDate> diasNaoUtil = (minInicio != null && maxFim != null)
+                ? diaNaoUtilRepository.findDatasBetween(minInicio, maxFim)
+                : Set.of();
+
+        Map<Long, ProfissionalDemandaTecnicaDTO> porDemanda = new HashMap<>();
+        Map<Long, Map<YearMonth, TotaisMensaisAcc>> mensalPorDemanda = new HashMap<>();
+
+        for (DemandaExecucaoTarefaRecurso recurso : recursos) {
+            DemandaExecucaoTarefa tarefa = recurso.getDemandaExecucaoTarefa();
+            if (tarefa == null || tarefa.getDemandaExecucao() == null || tarefa.getDemandaExecucao().getDemanda() == null) {
+                continue;
+            }
+
+            DemandaExecucao execucao = tarefa.getDemandaExecucao();
+            DemandaTecnica demanda = execucao.getDemanda();
+            Long demandaId = demanda.getId();
+
+            ProfissionalDemandaTecnicaDTO dto = porDemanda.computeIfAbsent(demandaId, id -> {
+                ProfissionalDemandaTecnicaDTO item = new ProfissionalDemandaTecnicaDTO();
+                item.setDemandaTecnicaId(demanda.getId());
+                item.setDemandaCodigo(demanda.getCodigo());
+                item.setDemandaNome(demanda.getNome());
+                item.setDemandaStatus(demanda.getStatus());
+                item.setTotalHorasExecutadas(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+                item.setTotalHorasPlanejadas(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+                item.setTotalHorasUteisPeriodo(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+                item.setTotaisMensais(new ArrayList<>());
+                item.setDataInicioExecucao(null);
+                item.setDataFimExecucao(null);
+                return item;
+            });
+
+            LocalDate inicioTarefa = resolveInicioTarefa(recurso);
+            LocalDate fimTarefa = resolveFimTarefa(recurso);
+            if (inicioTarefa != null
+                    && (dto.getDataInicioExecucao() == null || inicioTarefa.isBefore(dto.getDataInicioExecucao()))) {
+                dto.setDataInicioExecucao(inicioTarefa);
+            }
+            if (fimTarefa != null
+                    && (dto.getDataFimExecucao() == null || fimTarefa.isAfter(dto.getDataFimExecucao()))) {
+                dto.setDataFimExecucao(fimTarefa);
+            }
+
+            BigDecimal horasExecutadas = safe(recurso.getHorasExecutadas());
+            BigDecimal horasPlanejadas = safe(recurso.getHorasPlanejadas());
+            dto.setTotalHorasExecutadas(
+                    dto.getTotalHorasExecutadas().add(horasExecutadas).setScale(2, RoundingMode.HALF_UP));
+            dto.setTotalHorasPlanejadas(
+                    dto.getTotalHorasPlanejadas().add(horasPlanejadas).setScale(2, RoundingMode.HALF_UP));
+
+            if (inicioTarefa != null && fimTarefa != null && !fimTarefa.isBefore(inicioTarefa)) {
+                Map<YearMonth, TotaisMensaisAcc> accMensal =
+                        mensalPorDemanda.computeIfAbsent(demandaId, id -> new HashMap<>());
+
+                Map<YearMonth, BigDecimal> rateioPlanejado = alocarHorasPorMesComTeto(
+                        horasPlanejadas, inicioTarefa, fimTarefa, diasNaoUtil);
+                Map<YearMonth, BigDecimal> rateioExecutado = alocarHorasPorMesComTeto(
+                        horasExecutadas, inicioTarefa, fimTarefa, diasNaoUtil);
+
+                for (Map.Entry<YearMonth, BigDecimal> e : rateioPlanejado.entrySet()) {
+                    accMensal.computeIfAbsent(e.getKey(), ym -> new TotaisMensaisAcc())
+                            .addPlanejado(e.getValue());
+                }
+                for (Map.Entry<YearMonth, BigDecimal> e : rateioExecutado.entrySet()) {
+                    accMensal.computeIfAbsent(e.getKey(), ym -> new TotaisMensaisAcc())
+                            .addExecutado(e.getValue());
+                }
+            }
+        }
+
+        for (Map.Entry<Long, ProfissionalDemandaTecnicaDTO> entry : porDemanda.entrySet()) {
+            ProfissionalDemandaTecnicaDTO item = entry.getValue();
+            int diasUteis = diaUtilService.contarDiasUteis(
+                    item.getDataInicioExecucao(), item.getDataFimExecucao(), diasNaoUtil);
+            item.setTotalHorasUteisPeriodo(
+                    BigDecimal.valueOf(diasUteis)
+                            .multiply(BigDecimal.valueOf(DiaUtilService.HORAS_POR_DIA_UTIL))
+                            .setScale(2, RoundingMode.HALF_UP));
+
+            Map<YearMonth, TotaisMensaisAcc> accMensal =
+                    mensalPorDemanda.getOrDefault(entry.getKey(), Map.of());
+            List<ProfissionalDemandaTecnicaMensalDTO> totaisMensais = new ArrayList<>();
+            accMensal.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(e -> {
+                        YearMonth ym = e.getKey();
+                        TotaisMensaisAcc acc = e.getValue();
+                        totaisMensais.add(new ProfissionalDemandaTecnicaMensalDTO(
+                                ym.getYear(),
+                                ym.getMonthValue(),
+                                acc.totalPlanejado.setScale(2, RoundingMode.HALF_UP),
+                                acc.totalExecutado.setScale(2, RoundingMode.HALF_UP)
+                        ));
+                    });
+            item.setTotaisMensais(totaisMensais);
+        }
+
+        List<ProfissionalDemandaTecnicaDTO> demandasTecnicas = new ArrayList<>(porDemanda.values());
+        demandasTecnicas.sort(Comparator.comparing(
+                ProfissionalDemandaTecnicaDTO::getDemandaCodigo,
+                Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
+
+        List<ProfissionalDemandaTecnicaResumoMensalDTO> resumoMensal =
+                montarResumoMensal(demandasTecnicas, valorPerfil, custoMensalPorMes);
+
+        return new ProfissionalDemandasTecnicasResponseDTO(demandasTecnicas, resumoMensal);
+    }
+
+    /**
+     * Agrega {@code totaisMensais} de todas as DTs e aplica custos de perfil e mensal lançado.
+     */
+    List<ProfissionalDemandaTecnicaResumoMensalDTO> montarResumoMensal(
+            List<ProfissionalDemandaTecnicaDTO> demandasTecnicas,
+            BigDecimal valorPerfil,
+            Map<YearMonth, ProfissionalCustoMensal> custoMensalPorMes) {
+        Map<YearMonth, TotaisMensaisAcc> agregado = new HashMap<>();
+        if (demandasTecnicas != null) {
+            for (ProfissionalDemandaTecnicaDTO dt : demandasTecnicas) {
+                if (dt.getTotaisMensais() == null) {
+                    continue;
+                }
+                for (ProfissionalDemandaTecnicaMensalDTO m : dt.getTotaisMensais()) {
+                    if (m.getAno() == null || m.getMes() == null) {
+                        continue;
+                    }
+                    YearMonth ym = YearMonth.of(m.getAno(), m.getMes());
+                    TotaisMensaisAcc acc = agregado.computeIfAbsent(ym, k -> new TotaisMensaisAcc());
+                    acc.addPlanejado(m.getTotalPlanejado());
+                    acc.addExecutado(m.getTotalExecutado());
+                }
+            }
+        }
+
+        BigDecimal valorHoraPerfil = safe(valorPerfil);
+        Map<YearMonth, ProfissionalCustoMensal> custos =
+                custoMensalPorMes != null ? custoMensalPorMes : Map.of();
+
+        List<ProfissionalDemandaTecnicaResumoMensalDTO> resumo = new ArrayList<>();
+        agregado.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(e -> {
+                    YearMonth ym = e.getKey();
+                    TotaisMensaisAcc acc = e.getValue();
+                    BigDecimal totalPlanejado = acc.totalPlanejado.setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal totalExecutado = acc.totalExecutado.setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal valorCustoPerfil = totalExecutado
+                            .multiply(valorHoraPerfil)
+                            .setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal valorCustoMensal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+                    ProfissionalCustoMensal custoMes = custos.get(ym);
+                    if (custoMes != null) {
+                        valorCustoMensal = safe(custoMes.getCustoTotal()).setScale(2, RoundingMode.HALF_UP);
+                    }
+                    resumo.add(new ProfissionalDemandaTecnicaResumoMensalDTO(
+                            ym.getYear(),
+                            ym.getMonthValue(),
+                            totalPlanejado,
+                            totalExecutado,
+                            valorCustoPerfil,
+                            valorCustoMensal
+                    ));
+                });
+        return resumo;
+    }
+
+    /**
+     * Aloca {@code totalHoras} por mês: capacidade = dias úteis × 8, consumindo o total
+     * em ordem cronológica (teto sequencial). Horas &lt;= 0 → mapa vazio.
+     */
+    Map<YearMonth, BigDecimal> alocarHorasPorMesComTeto(
+            BigDecimal totalHoras,
+            LocalDate inicio,
+            LocalDate fim,
+            Set<LocalDate> diasNaoUtil) {
+        BigDecimal total = safe(totalHoras).setScale(2, RoundingMode.HALF_UP);
+        if (total.compareTo(BigDecimal.ZERO) <= 0) {
+            return Map.of();
+        }
+        return diaUtilService.calcularHorasPorMesPorDiasUteis(total, inicio, fim, diasNaoUtil);
+    }
+
+    Map<YearMonth, Integer> contarDiasUteisPorMes(LocalDate inicio, LocalDate fim, Set<LocalDate> diasNaoUtil) {
+        Map<YearMonth, Integer> result = new HashMap<>();
+        if (inicio == null || fim == null || fim.isBefore(inicio)) {
+            return result;
+        }
+        YearMonth ymInicio = YearMonth.from(inicio);
+        YearMonth ymFim = YearMonth.from(fim);
+        YearMonth cursor = ymInicio;
+        while (!cursor.isAfter(ymFim)) {
+            LocalDate iniMes = cursor.equals(ymInicio) ? inicio : cursor.atDay(1);
+            LocalDate fimMes = cursor.equals(ymFim) ? fim : cursor.atEndOfMonth();
+            int dias = diaUtilService.contarDiasUteis(iniMes, fimMes, diasNaoUtil);
+            if (dias > 0) {
+                result.put(cursor, dias);
+            }
+            cursor = cursor.plusMonths(1);
+        }
+        return result;
+    }
+
+    private static final class TotaisMensaisAcc {
+        private BigDecimal totalPlanejado = BigDecimal.ZERO;
+        private BigDecimal totalExecutado = BigDecimal.ZERO;
+
+        void addPlanejado(BigDecimal valor) {
+            totalPlanejado = totalPlanejado.add(safe(valor));
+        }
+
+        void addExecutado(BigDecimal valor) {
+            totalExecutado = totalExecutado.add(safe(valor));
+        }
     }
 
     private static LocalDate resolveInicioTarefa(DemandaExecucaoTarefaRecurso recurso) {

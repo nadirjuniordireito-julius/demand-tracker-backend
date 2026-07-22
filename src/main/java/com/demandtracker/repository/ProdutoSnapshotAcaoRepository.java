@@ -20,8 +20,11 @@ public interface ProdutoSnapshotAcaoRepository extends JpaRepository<ProdutoSnap
     long countBySnapshotId(Long snapshotId);
 
     @Query("SELECT a FROM ProdutoSnapshotAcao a "
-            + "WHERE a.snapshot.ano = :ano AND a.snapshot.mes = :mes "
-            + "AND (:projetoId IS NULL OR a.snapshot.metaProduto.projetoMeta.projeto.id = :projetoId) "
+            + "JOIN FETCH a.snapshot s "
+            + "JOIN FETCH s.metaProduto mp "
+            + "JOIN FETCH mp.projetoMeta pm "
+            + "WHERE s.ano = :ano AND s.mes = :mes "
+            + "AND (:projetoId IS NULL OR pm.projeto.id = :projetoId) "
             + "AND a.statusAcao IN :statusAtivos "
             + "AND a.prazo < :hoje "
             + "ORDER BY a.prazo ASC")

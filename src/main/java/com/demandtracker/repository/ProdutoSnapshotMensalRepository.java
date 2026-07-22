@@ -31,11 +31,15 @@ public interface ProdutoSnapshotMensalRepository extends JpaRepository<ProdutoSn
     Page<ProdutoSnapshotMensal> findByMetaProdutoIdAndAnoAndMes(Long metaProdutoId, Integer ano, Integer mes, Pageable pageable);
 
     @Query("SELECT s FROM ProdutoSnapshotMensal s "
+            + "JOIN FETCH s.metaProduto mp "
+            + "JOIN FETCH mp.projetoMeta pm "
             + "WHERE s.ano = :ano AND s.mes = :mes "
-            + "AND (:projetoId IS NULL OR s.metaProduto.projetoMeta.projeto.id = :projetoId)")
+            + "AND (:projetoId IS NULL OR pm.projeto.id = :projetoId)")
     List<ProdutoSnapshotMensal> findRelatorioGestor(
             @Param("ano") Integer ano,
             @Param("mes") Integer mes,
             @Param("projetoId") Long projetoId
     );
+
+    Optional<ProdutoSnapshotMensal> findTopByMetaProduto_ProjetoMeta_Projeto_IdOrderByAnoDescMesDesc(Long projetoId);
 }

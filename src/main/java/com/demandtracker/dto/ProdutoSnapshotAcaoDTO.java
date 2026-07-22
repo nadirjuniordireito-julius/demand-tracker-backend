@@ -1,6 +1,8 @@
 package com.demandtracker.dto;
 
+import com.demandtracker.entity.MetaProduto;
 import com.demandtracker.entity.ProdutoSnapshotAcao;
+import com.demandtracker.entity.ProjetoMeta;
 import com.demandtracker.entity.enums.ImpactoAcao;
 import com.demandtracker.entity.enums.StatusAcaoProduto;
 import com.demandtracker.entity.enums.TipoAcaoProduto;
@@ -30,6 +32,13 @@ public class ProdutoSnapshotAcaoDTO {
     private LocalDateTime dataCriacao;
     private LocalDateTime dataUpdate;
 
+    private Long metaProdutoId;
+    private String codigoProduto;
+    private String descricaoProduto;
+    private Long projetoMetaId;
+    private String codigoMeta;
+    private String descricaoMeta;
+
     public static ProdutoSnapshotAcaoDTO fromEntity(ProdutoSnapshotAcao entity) {
         if (entity == null) {
             return null;
@@ -38,6 +47,18 @@ public class ProdutoSnapshotAcaoDTO {
         dto.setId(entity.getId());
         if (entity.getSnapshot() != null) {
             dto.setSnapshotId(entity.getSnapshot().getId());
+            MetaProduto metaProduto = entity.getSnapshot().getMetaProduto();
+            if (metaProduto != null) {
+                dto.setMetaProdutoId(metaProduto.getId());
+                dto.setCodigoProduto(metaProduto.getCodigo());
+                dto.setDescricaoProduto(metaProduto.getDescricao());
+                ProjetoMeta projetoMeta = metaProduto.getProjetoMeta();
+                if (projetoMeta != null) {
+                    dto.setProjetoMetaId(projetoMeta.getId());
+                    dto.setCodigoMeta(projetoMeta.getCodigo());
+                    dto.setDescricaoMeta(projetoMeta.getDescricao());
+                }
+            }
         }
         dto.setTipoAcao(entity.getTipoAcao());
         dto.setDescricao(entity.getDescricao());
