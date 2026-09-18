@@ -77,6 +77,36 @@ class DiaUtilServiceTest {
                 .isEqualByComparingTo("50");
     }
 
+    @Test
+    void horasPrevistasNoMes_termoNoMeio_contaAPartirDaAdmissao() {
+        // março/2026 cheio: 22 úteis × 8 = 176; a partir de 16/03 (seg): 12 úteis × 8 = 96
+        BigDecimal mesCheio = service.calcularHorasPrevistasNoMes(
+                YearMonth.of(2026, 3), null, Set.of());
+        BigDecimal comAdmissao = service.calcularHorasPrevistasNoMes(
+                YearMonth.of(2026, 3), LocalDate.of(2026, 3, 16), Set.of());
+
+        assertThat(mesCheio).isEqualByComparingTo("176.00");
+        assertThat(comAdmissao).isEqualByComparingTo("96.00");
+        assertThat(comAdmissao).isLessThan(mesCheio);
+    }
+
+    @Test
+    void horasPrevistasNoMes_mesAnteriorAAdmissao_zero() {
+        BigDecimal horas = service.calcularHorasPrevistasNoMes(
+                YearMonth.of(2026, 2), LocalDate.of(2026, 3, 16), Set.of());
+        assertThat(horas).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void horasPrevistasNoMes_mesPosteriorAAdmissao_mesCheio() {
+        BigDecimal comAdmissao = service.calcularHorasPrevistasNoMes(
+                YearMonth.of(2026, 4), LocalDate.of(2026, 3, 16), Set.of());
+        BigDecimal mesCheio = service.calcularHorasPrevistasNoMes(
+                YearMonth.of(2026, 4), null, Set.of());
+        assertThat(comAdmissao).isEqualByComparingTo(mesCheio);
+        assertThat(comAdmissao).isEqualByComparingTo("176.00"); // abr/2026: 22 úteis
+    }
+
     private static void merge(Map<YearMonth, BigDecimal> total, Map<YearMonth, BigDecimal> parcial) {
         parcial.forEach((ym, h) -> total.merge(ym, h, BigDecimal::add));
     }

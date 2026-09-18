@@ -51,6 +51,7 @@ interface ProfissionalDemandaTecnicaResumoMensalDTO {
   totalExecutado: number;      // soma dos totaisMensais.totalExecutado de todas as DTs
   valorCustoPerfil: number;    // totalExecutado × profissional.perfil.valor
   valorCustoMensal: number;    // ProfissionalCustoMensal.custoTotal (ano/mês) ou 0
+  horasPrevistas: number;      // dias úteis do mês × 8 a partir de max(1º do mês, dataInicioAtividade); exclui fds e dia_nao_util
 }
 
 interface ProfissionalDemandasTecnicasResponseDTO {
@@ -103,7 +104,8 @@ Derivado **após** montar `demandasTecnicas` (não recalcula rateio):
 1. Soma `totaisMensais.totalPlanejado` e `totalExecutado` de **todas** as DTs por `(ano, mes)`
 2. `valorCustoPerfil = totalExecutado × profissional.perfil.valor` (perfil/valor nulo → 0)
 3. `valorCustoMensal = profissional_custo_mensal.custoTotal` para profissional/ano/mês (sem registro → 0; se houver mais de um, maior `id`)
-4. Ordenado por ano/mês crescente
+4. `horasPrevistas` = dias úteis do mês × **8** h/dia, a partir de `max(1º dia do mês, profissional.dataInicioAtividade)`. Exclui sábado, domingo e datas em `dia_nao_util`. Se a admissão for após o fim do mês → 0. Independente do recorte das tarefas
+5. Ordenado por ano/mês crescente
 
 ### Período de execução
 
@@ -155,7 +157,8 @@ Tarefa `22/06/2026`–`10/07/2026` com 80h planejadas e 80h executadas: junho ca
       "totalPlanejado": 56.00,
       "totalExecutado": 56.00,
       "valorCustoPerfil": 5600.00,
-      "valorCustoMensal": 5000.00
+      "valorCustoMensal": 5000.00,
+      "horasPrevistas": 176.00
     },
     {
       "ano": 2026,
@@ -163,7 +166,8 @@ Tarefa `22/06/2026`–`10/07/2026` com 80h planejadas e 80h executadas: junho ca
       "totalPlanejado": 24.00,
       "totalExecutado": 24.00,
       "valorCustoPerfil": 2400.00,
-      "valorCustoMensal": 0.00
+      "valorCustoMensal": 0.00,
+      "horasPrevistas": 184.00
     }
   ]
 }

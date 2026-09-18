@@ -318,9 +318,12 @@ public class ProfissionalService {
             }
         }
 
-        Set<LocalDate> diasNaoUtil = (minInicio != null && maxFim != null)
-                ? diaNaoUtilRepository.findDatasBetween(minInicio, maxFim)
-                : Set.of();
+        Set<LocalDate> diasNaoUtil = Set.of();
+        if (minInicio != null && maxFim != null) {
+            LocalDate inicioMesCivil = YearMonth.from(minInicio).atDay(1);
+            LocalDate fimMesCivil = YearMonth.from(maxFim).atEndOfMonth();
+            diasNaoUtil = diaNaoUtilRepository.findDatasBetween(inicioMesCivil, fimMesCivil);
+        }
 
         Map<Long, ProfissionalDemandaTecnicaDTO> porDemanda = new HashMap<>();
         Map<Long, Map<YearMonth, TotaisMensaisAcc>> mensalPorDemanda = new HashMap<>();
@@ -421,18 +424,26 @@ public class ProfissionalService {
                 Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
 
         List<ProfissionalDemandaTecnicaResumoMensalDTO> resumoMensal =
-                montarResumoMensal(demandasTecnicas, valorPerfil, custoMensalPorMes);
+                montarResumoMensal(
+                        demandasTecnicas,
+                        valorPerfil,
+                        custoMensalPorMes,
+                        diasNaoUtil,
+                        profissional.getDataInicioAtividade());
 
         return new ProfissionalDemandasTecnicasResponseDTO(demandasTecnicas, resumoMensal);
     }
 
     /**
      * Agrega {@code totaisMensais} de todas as DTs e aplica custos de perfil e mensal lançado.
+     * {@code horasPrevistas} = dias úteis do mês × 8 a partir de {@code max(1º do mês, dataInicioAtividade)}.
      */
     List<ProfissionalDemandaTecnicaResumoMensalDTO> montarResumoMensal(
             List<ProfissionalDemandaTecnicaDTO> demandasTecnicas,
             BigDecimal valorPerfil,
-            Map<YearMonth, ProfissionalCustoMensal> custoMensalPorMes) {
+            Map<YearMonth, ProfissionalCustoMensal> custoMensalPorMes,
+            Set<LocalDate> diasNaoUtil,
+            LocalDate dataInicioAtividade) {
         Map<YearMonth, TotaisMensaisAcc> agregado = new HashMap<>();
         if (demandasTecnicas != null) {
             for (ProfissionalDemandaTecnicaDTO dt : demandasTecnicas) {
@@ -454,6 +465,7 @@ public class ProfissionalService {
         BigDecimal valorHoraPerfil = safe(valorPerfil);
         Map<YearMonth, ProfissionalCustoMensal> custos =
                 custoMensalPorMes != null ? custoMensalPorMes : Map.of();
+        Set<LocalDate> naoUteis = diasNaoUtil != null ? diasNaoUtil : Set.of();
 
         List<ProfissionalDemandaTecnicaResumoMensalDTO> resumo = new ArrayList<>();
         agregado.entrySet().stream()
@@ -471,13 +483,16 @@ public class ProfissionalService {
                     if (custoMes != null) {
                         valorCustoMensal = safe(custoMes.getCustoTotal()).setScale(2, RoundingMode.HALF_UP);
                     }
+                    BigDecimal horasPrevistas = diaUtilService.calcularHorasPrevistasNoMes(
+                            ym, dataInicioAtividade, naoUteis);
                     resumo.add(new ProfissionalDemandaTecnicaResumoMensalDTO(
                             ym.getYear(),
                             ym.getMonthValue(),
                             totalPlanejado,
                             totalExecutado,
                             valorCustoPerfil,
-                            valorCustoMensal
+                            valorCustoMensal,
+                            horasPrevistas
                     ));
                 });
         return resumo;

@@ -54,6 +54,8 @@ public interface DemandaTecnicaRepository extends JpaRepository<DemandaTecnica, 
 
     long countByMetaProdutoIdAndStatus(Long metaProdutoId, String status);
 
+    long countByMetaProdutoIdAndStatusIn(Long metaProdutoId, java.util.Collection<String> statuses);
+
     @Query("SELECT COUNT(d) FROM DemandaTecnica d")
     Long countTotal();
     

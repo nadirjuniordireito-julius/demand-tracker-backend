@@ -13,6 +13,7 @@ import com.demandtracker.entity.ProjetoMeta;
 import com.demandtracker.entity.Usuario;
 import com.demandtracker.entity.enums.SemaforoNivel;
 import com.demandtracker.entity.enums.SemaforoStatus;
+import com.demandtracker.entity.enums.StatusDemandaTecnica;
 import com.demandtracker.exception.BadRequestException;
 import com.demandtracker.exception.ResourceNotFoundException;
 import com.demandtracker.repository.DemandaTecnicaRepository;
@@ -175,8 +176,11 @@ public class ProjetoService {
 
         int totalDemandasProjeto = 0;
         int totalDemandasEncerradasProjeto = 0;
-        BigDecimal somaPercExecMetas = BigDecimal.ZERO;
-        int qtdMetasComPerc = 0;
+        BigDecimal somaValorPrevisto = BigDecimal.ZERO;
+        BigDecimal somaValorPrevistoAnalise = BigDecimal.ZERO;
+        BigDecimal somaValorEmExecucao = BigDecimal.ZERO;
+        BigDecimal somaValorEmEncerramento = BigDecimal.ZERO;
+        BigDecimal somaValorEncerradas = BigDecimal.ZERO;
 
         SemaforoStatus statusProjeto = SemaforoStatus.CINZA;
 
@@ -190,19 +194,38 @@ public class ProjetoService {
             if (metaNode.getQtdDemandasEncerradas() != null) {
                 totalDemandasEncerradasProjeto += metaNode.getQtdDemandasEncerradas();
             }
-            if (metaNode.getPercentualExecutado() != null) {
-                somaPercExecMetas = somaPercExecMetas.add(metaNode.getPercentualExecutado());
-                qtdMetasComPerc++;
+            if (metaNode.getValorTotalPrevisto() != null) {
+                somaValorPrevisto = somaValorPrevisto.add(metaNode.getValorTotalPrevisto());
+            }
+            if (metaNode.getValorTotalPrevistoAnalise() != null) {
+                somaValorPrevistoAnalise = somaValorPrevistoAnalise.add(metaNode.getValorTotalPrevistoAnalise());
+            }
+            if (metaNode.getValorTotalEmExecucao() != null) {
+                somaValorEmExecucao = somaValorEmExecucao.add(metaNode.getValorTotalEmExecucao());
+            }
+            if (metaNode.getValorTotalEmEncerramento() != null) {
+                somaValorEmEncerramento = somaValorEmEncerramento.add(metaNode.getValorTotalEmEncerramento());
+            }
+            if (metaNode.getValorTotalEncerradas() != null) {
+                somaValorEncerradas = somaValorEncerradas.add(metaNode.getValorTotalEncerradas());
             }
 
             statusProjeto = agregarStatus(statusProjeto, metaNode.getStatus());
         }
 
-        if (qtdMetasComPerc > 0) {
-            projetoNode.setPercentualExecutado(somaPercExecMetas.divide(BigDecimal.valueOf(qtdMetasComPerc), 2, java.math.RoundingMode.HALF_UP));
-        }
         projetoNode.setQtdDemandas(totalDemandasProjeto);
         projetoNode.setQtdDemandasEncerradas(totalDemandasEncerradasProjeto);
+        projetoNode.setValorTotalPrevisto(somaValorPrevisto);
+        projetoNode.setValorTotalPrevistoAnalise(somaValorPrevistoAnalise);
+        projetoNode.setValorTotalEmExecucao(somaValorEmExecucao);
+        projetoNode.setValorTotalEmEncerramento(somaValorEmEncerramento);
+        projetoNode.setValorTotalEncerradas(somaValorEncerradas);
+        BigDecimal somaParaPercentual = somaValorEmExecucao
+                .add(somaValorEmEncerramento)
+                .add(somaValorEncerradas);
+        projetoNode.setValorTotalExecutado(somaParaPercentual);
+        projetoNode.setPercentualExecutado(calcularPercentualExecutado(somaValorPrevisto, somaParaPercentual));
+        projetoNode.setPercentualExecutadoAnalise(calcularPercentualExecutadoAnalise(somaValorPrevistoAnalise, somaParaPercentual));
         projetoNode.setStatus(statusProjeto);
 
         return projetoNode;
@@ -260,7 +283,10 @@ public class ProjetoService {
         int totalDemandasMeta = 0;
         int totalDemandasEncerradasMeta = 0;
         BigDecimal somaValorPrevisto = BigDecimal.ZERO;
-        BigDecimal somaValorExecutado = BigDecimal.ZERO;
+        BigDecimal somaValorPrevistoAnalise = BigDecimal.ZERO;
+        BigDecimal somaValorEmExecucao = BigDecimal.ZERO;
+        BigDecimal somaValorEmEncerramento = BigDecimal.ZERO;
+        BigDecimal somaValorEncerradas = BigDecimal.ZERO;
 
         SemaforoStatus statusMeta = SemaforoStatus.CINZA;
 
@@ -286,8 +312,17 @@ public class ProjetoService {
             if (produtoNode.getValorTotalPrevisto() != null) {
                 somaValorPrevisto = somaValorPrevisto.add(produtoNode.getValorTotalPrevisto());
             }
-            if (produtoNode.getValorTotalExecutado() != null) {
-                somaValorExecutado = somaValorExecutado.add(produtoNode.getValorTotalExecutado());
+            if (produtoNode.getValorTotalPrevistoAnalise() != null) {
+                somaValorPrevistoAnalise = somaValorPrevistoAnalise.add(produtoNode.getValorTotalPrevistoAnalise());
+            }
+            if (produtoNode.getValorTotalEmExecucao() != null) {
+                somaValorEmExecucao = somaValorEmExecucao.add(produtoNode.getValorTotalEmExecucao());
+            }
+            if (produtoNode.getValorTotalEmEncerramento() != null) {
+                somaValorEmEncerramento = somaValorEmEncerramento.add(produtoNode.getValorTotalEmEncerramento());
+            }
+            if (produtoNode.getValorTotalEncerradas() != null) {
+                somaValorEncerradas = somaValorEncerradas.add(produtoNode.getValorTotalEncerradas());
             }
 
             statusMeta = agregarStatus(statusMeta, produtoNode.getStatus());
@@ -299,8 +334,19 @@ public class ProjetoService {
         metaNode.setQtdDemandas(totalDemandasMeta);
         metaNode.setQtdDemandasEncerradas(totalDemandasEncerradasMeta);
         metaNode.setValorTotalPrevisto(somaValorPrevisto);
-        metaNode.setValorTotalExecutado(somaValorExecutado);
-        metaNode.setPercentualExecutado(calcularPercentualExecutado(somaValorPrevisto, somaValorExecutado));
+        metaNode.setValorTotalPrevistoAnalise(somaValorPrevistoAnalise);
+        metaNode.setValorTotalEmExecucao(somaValorEmExecucao);
+        metaNode.setValorTotalEmEncerramento(somaValorEmEncerramento);
+        metaNode.setValorTotalEncerradas(somaValorEncerradas);
+        BigDecimal somaParaPercentual = somaValorEmExecucao
+                .add(somaValorEmEncerramento)
+                .add(somaValorEncerradas);
+        // valorTotalExecutado na meta = E+F+G (mesma base do percentual)
+        metaNode.setValorTotalExecutado(somaParaPercentual);
+        metaNode.setPercentualExecutado(calcularPercentualExecutado(somaValorPrevisto, somaParaPercentual));
+        // percentual do valor previsto para analise
+        metaNode.setPercentualExecutadoAnalise(calcularPercentualExecutadoAnalise(somaValorPrevistoAnalise, somaParaPercentual));
+
         metaNode.setStatus(statusMeta);
 
         return metaNode;
@@ -328,25 +374,62 @@ public class ProjetoService {
             node.setValorTotalPrevisto(produto.getValorUnitario().multiply(BigDecimal.valueOf(produto.getQuantidade())));
         }
 
-        BigDecimal valorExecutado = termoEncerramentoRepository.sumValorExecutadoByMetaProdutoIdAndStatus(
-                produto.getId(), com.demandtracker.entity.DemandaTecnica.STATUS_ENCERRADA);
-        node.setValorTotalExecutado(valorExecutado != null ? valorExecutado : BigDecimal.ZERO);
-
-        node.setPercentualExecutado(calcularPercentualExecutado(node.getValorTotalPrevisto(), node.getValorTotalExecutado()));
+        // Previsto para análise: só conta se dataInicio do produto (+ 1 mês) <= data atual
+        LocalDate dataInicio = node.getDataInicio();
+        if (dataInicio != null) {
+            dataInicio = dataInicio.plusMonths(1);
+        }
+        if (dataInicio != null && !dataInicio.isAfter(LocalDate.now()) && node.getValorTotalPrevisto() != null) {
+            node.setValorTotalPrevistoAnalise(node.getValorTotalPrevisto());
+        } else {
+            node.setValorTotalPrevistoAnalise(BigDecimal.ZERO);
+        }
 
         // Não considerar demandas canceladas (status Z) no semáforo
         final String statusCancelada = "Z";
         long qtdDemandas = demandaTecnicaRepository.countByMetaProdutoIdAndStatusNot(produto.getId(), statusCancelada);
-        long qtdDemandasEncerradas = demandaTecnicaRepository.countByMetaProdutoIdAndStatus(produto.getId(), com.demandtracker.entity.DemandaTecnica.STATUS_ENCERRADA);
+        // Demandas executadas no semáforo: Em execução (E), Em encerramento (F) ou Encerrada (G)
+        long qtdDemandasEncerradas = demandaTecnicaRepository.countByMetaProdutoIdAndStatusIn(
+                produto.getId(),
+                List.of(
+                        StatusDemandaTecnica.E.getCodigo(),
+                        StatusDemandaTecnica.F.getCodigo(),
+                        StatusDemandaTecnica.G.getCodigo()));
         node.setQtdDemandas((int) qtdDemandas);
         node.setQtdDemandasEncerradas((int) qtdDemandasEncerradas);
 
         node.setStatus(calcularStatusProduto(produto));
 
+        // E/F/G nascem na demanda e são somados no produto
+        BigDecimal valorTotalEmExecucao = BigDecimal.ZERO;
+        BigDecimal valorTotalEmEncerramento = BigDecimal.ZERO;
+        BigDecimal valorTotalEncerradas = BigDecimal.ZERO;
         List<DemandaTecnica> demandas = demandaTecnicaRepository.findByMetaProdutoIdAndStatusNot(produto.getId(), statusCancelada);
         for (DemandaTecnica demanda : demandas) {
-            node.getChildren().add(buildDemandaNode(demanda));
+            SemaforoNodeDTO demandaNode = buildDemandaNode(demanda);
+            node.getChildren().add(demandaNode);
+            if (demandaNode.getValorTotalEmExecucao() != null) {
+                valorTotalEmExecucao = valorTotalEmExecucao.add(demandaNode.getValorTotalEmExecucao());
+            }
+            if (demandaNode.getValorTotalEmEncerramento() != null) {
+                valorTotalEmEncerramento = valorTotalEmEncerramento.add(demandaNode.getValorTotalEmEncerramento());
+            }
+            if (demandaNode.getValorTotalEncerradas() != null) {
+                valorTotalEncerradas = valorTotalEncerradas.add(demandaNode.getValorTotalEncerradas());
+            }
         }
+        node.setValorTotalEmExecucao(valorTotalEmExecucao);
+        node.setValorTotalEmEncerramento(valorTotalEmEncerramento);
+        node.setValorTotalEncerradas(valorTotalEncerradas);
+
+        BigDecimal valorExecutado = valorTotalEmExecucao
+                .add(valorTotalEmEncerramento)
+                .add(valorTotalEncerradas);
+        node.setValorTotalExecutado(valorExecutado);
+        node.setPercentualExecutado(calcularPercentualExecutado(node.getValorTotalPrevisto(), valorExecutado));
+        
+        // em relação ao periodo do produto
+        node.setPercentualExecutadoAnalise(calcularPercentualExecutadoAnalise(node.getValorTotalPrevistoAnalise(), valorExecutado));
 
         return node;
     }
@@ -376,17 +459,35 @@ public class ProjetoService {
 
         /**
          * Valor total previsto de exeução da demanda
-         */ 
+         */
         BigDecimal valorPlanejadoDemanda = termoPlanejamentoRepository.sumValorPlanejadoyDemandaTecnicaId(demanda.getId());
         node.setValorTotalPrevisto(valorPlanejadoDemanda != null ? valorPlanejadoDemanda : BigDecimal.ZERO);
-        
+
         /**
          * Valor total executado de exeução da demanda
-         */ 
+         */
         BigDecimal valorExecutadoDemanda = termoEncerramentoRepository.sumValorExecutadoByDemandaTecnicaId(demanda.getId());
         node.setValorTotalExecutado(valorExecutadoDemanda != null ? valorExecutadoDemanda : BigDecimal.ZERO);
 
-        node.setPercentualExecutado(calcularPercentualExecutado(node.getValorTotalPrevisto(), node.getValorTotalExecutado()));
+        // E: sumValorPlanejadoyDemandaTecnicaId; F/G: sumValorExecutadoByDemandaTecnicaId
+        BigDecimal zero = BigDecimal.ZERO;
+        node.setValorTotalEmExecucao(zero);
+        node.setValorTotalEmEncerramento(zero);
+        node.setValorTotalEncerradas(zero);
+
+        if (StatusDemandaTecnica.E.getCodigo().equals(statusDemanda)) {
+            node.setValorTotalEmExecucao(node.getValorTotalPrevisto());
+        } else if (StatusDemandaTecnica.F.getCodigo().equals(statusDemanda)) {
+            node.setValorTotalEmEncerramento(node.getValorTotalExecutado());
+        } else if (StatusDemandaTecnica.G.getCodigo().equals(statusDemanda)) {
+            node.setValorTotalEncerradas(node.getValorTotalExecutado());
+        }
+
+        BigDecimal somaExecutadoEfg = node.getValorTotalEmExecucao()
+                .add(node.getValorTotalEmEncerramento())
+                .add(node.getValorTotalEncerradas());
+        node.setValorTotalExecutado(somaExecutadoEfg);
+        node.setPercentualExecutado(calcularPercentualExecutado(node.getValorTotalPrevisto(), somaExecutadoEfg));
         node.setExecucao(
                 demandaExecucaoRepository.findByDemandaId(demanda.getId())
                         .map(DemandaExecucaoDTO::fromEntity)
@@ -414,6 +515,14 @@ public class ProjetoService {
                 .divide(valorTotalPrevisto, 2, java.math.RoundingMode.HALF_UP);
     }
 
+    private BigDecimal calcularPercentualExecutadoAnalise(BigDecimal valorTotalPrevistoAnalise, BigDecimal valorTotalExecutado) {
+        if (valorTotalPrevistoAnalise == null || valorTotalPrevistoAnalise.compareTo(BigDecimal.ZERO) <= 0 || valorTotalExecutado == null) {
+            return BigDecimal.ZERO;
+        }
+        return valorTotalExecutado
+                .multiply(BigDecimal.valueOf(100))
+                .divide(valorTotalPrevistoAnalise, 2, java.math.RoundingMode.HALF_UP);
+    }
     /**
      * Calcula o status do semáforo do produto considerando:
      * - Período oficial (dataInicio, dataFim) e % executado.

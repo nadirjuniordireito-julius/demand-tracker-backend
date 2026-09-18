@@ -162,8 +162,9 @@ class ProfissionalServiceRateioMensalTest {
         Map<YearMonth, ProfissionalCustoMensal> custos = new HashMap<>();
         custos.put(YearMonth.of(2026, 6), custoJun);
 
+        // junho/2026: 22 úteis × 8 = 176; julho/2026: 23 úteis × 8 = 184
         List<ProfissionalDemandaTecnicaResumoMensalDTO> resumo = service.montarResumoMensal(
-                List.of(dt1, dt2), bd("100.00"), custos);
+                List.of(dt1, dt2), bd("100.00"), custos, Set.of(), null);
 
         assertThat(resumo).hasSize(2);
 
@@ -174,6 +175,7 @@ class ProfissionalServiceRateioMensalTest {
         assertThat(jun.getTotalExecutado()).isEqualByComparingTo("88.00");
         assertThat(jun.getValorCustoPerfil()).isEqualByComparingTo("8800.00");
         assertThat(jun.getValorCustoMensal()).isEqualByComparingTo("5000.00");
+        assertThat(jun.getHorasPrevistas()).isEqualByComparingTo("176.00");
 
         ProfissionalDemandaTecnicaResumoMensalDTO jul = resumo.get(1);
         assertThat(jul.getMes()).isEqualTo(7);
@@ -181,6 +183,51 @@ class ProfissionalServiceRateioMensalTest {
         assertThat(jul.getTotalExecutado()).isEqualByComparingTo("24.00");
         assertThat(jul.getValorCustoPerfil()).isEqualByComparingTo("2400.00");
         assertThat(jul.getValorCustoMensal()).isEqualByComparingTo("0.00");
+        assertThat(jul.getHorasPrevistas()).isEqualByComparingTo("184.00");
+    }
+
+    @Test
+    void montarResumoMensal_feriadoReduzHorasPrevistas() {
+        ProfissionalDemandaTecnicaDTO dt = new ProfissionalDemandaTecnicaDTO();
+        dt.setTotaisMensais(List.of(
+                new ProfissionalDemandaTecnicaMensalDTO(2026, 6, bd("56.00"), bd("56.00"))
+        ));
+
+        Set<LocalDate> feriado = Set.of(LocalDate.of(2026, 6, 4)); // qui — Corpus Christi
+
+        List<ProfissionalDemandaTecnicaResumoMensalDTO> semFeriado = service.montarResumoMensal(
+                List.of(dt), bd("100.00"), Map.of(), Set.of(), null);
+        List<ProfissionalDemandaTecnicaResumoMensalDTO> comFeriado = service.montarResumoMensal(
+                List.of(dt), bd("100.00"), Map.of(), feriado, null);
+
+        // junho/2026: 22 → 21 úteis × 8 = 168
+        assertThat(semFeriado.get(0).getHorasPrevistas()).isEqualByComparingTo("176.00");
+        assertThat(comFeriado.get(0).getHorasPrevistas()).isEqualByComparingTo("168.00");
+        assertThat(comFeriado.get(0).getHorasPrevistas())
+                .isLessThan(semFeriado.get(0).getHorasPrevistas());
+    }
+
+    @Test
+    void montarResumoMensal_admissaoNoMeioDoMes_reduzHorasPrevistas() {
+        ProfissionalDemandaTecnicaDTO dt = new ProfissionalDemandaTecnicaDTO();
+        dt.setTotaisMensais(List.of(
+                new ProfissionalDemandaTecnicaMensalDTO(2026, 3, bd("40.00"), bd("40.00")),
+                new ProfissionalDemandaTecnicaMensalDTO(2026, 4, bd("40.00"), bd("40.00"))
+        ));
+
+        LocalDate admissao = LocalDate.of(2026, 3, 16);
+        List<ProfissionalDemandaTecnicaResumoMensalDTO> semAdmissao = service.montarResumoMensal(
+                List.of(dt), bd("100.00"), Map.of(), Set.of(), null);
+        List<ProfissionalDemandaTecnicaResumoMensalDTO> comAdmissao = service.montarResumoMensal(
+                List.of(dt), bd("100.00"), Map.of(), Set.of(), admissao);
+
+        // março: 176 → 96 (16/03–31/03); abril permanece mês cheio
+        assertThat(semAdmissao.get(0).getHorasPrevistas()).isEqualByComparingTo("176.00");
+        assertThat(comAdmissao.get(0).getHorasPrevistas()).isEqualByComparingTo("96.00");
+        assertThat(comAdmissao.get(0).getHorasPrevistas())
+                .isLessThan(semAdmissao.get(0).getHorasPrevistas());
+        assertThat(comAdmissao.get(1).getHorasPrevistas())
+                .isEqualByComparingTo(semAdmissao.get(1).getHorasPrevistas());
     }
 
     private static BigDecimal bd(String v) {

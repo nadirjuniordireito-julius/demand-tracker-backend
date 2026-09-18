@@ -17,4 +17,5 @@ public class ProfissionalDemandaTecnicaResumoMensalDTO {
     private BigDecimal totalExecutado;
     private BigDecimal valorCustoPerfil;
     private BigDecimal valorCustoMensal;
+    private BigDecimal horasPrevistas;
 }

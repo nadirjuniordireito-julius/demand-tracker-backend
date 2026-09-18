@@ -40,6 +40,7 @@ public class SemaforoNodeDTO {
     private LocalDate dataFim;
 
     private BigDecimal percentualExecutado;
+    private BigDecimal percentualExecutadoAnalise;
     private Integer qtdDemandas;
     private Integer qtdDemandasEncerradas;
 
@@ -47,6 +48,9 @@ public class SemaforoNodeDTO {
     private BigDecimal valorTotalPrevisto;
     /** Valor total executado (meta = soma dos produtos; produto = soma dos custos das demandas encerradas do produto). */
     private BigDecimal valorTotalExecutado;
+    private BigDecimal valorTotalEmExecucao;
+    private BigDecimal valorTotalEmEncerramento;
+    private BigDecimal valorTotalEncerradas;
 
     /** Preenchidos quando nivel = DEMANDA: IDs dos termos vinculados à demanda técnica. */
     private Long idTermoAbertura;
@@ -56,6 +60,11 @@ public class SemaforoNodeDTO {
     /** Detalhes de execução da demanda técnica. Opcional e preenchido quando houver execução. */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private DemandaExecucaoDTO execucao;
+
+    /** Preencher com o valor dos filhos mas levando em consideração apenas se o produto está disponível para início
+     * das atividades conforme previsto no mes/ano inicial em relação à data da consulta
+     */
+    private BigDecimal valorTotalPrevistoAnalise;
 
     private List<SemaforoNodeDTO> children = new ArrayList<>();
 }

@@ -34,6 +34,34 @@ public class DiaUtilService {
     }
 
     /**
+     * Capacidade do mês civil em horas (dias úteis × {@link #HORAS_POR_DIA_UTIL}).
+     * Se {@code termoInicial} for informado (ex.: admissão do profissional), a contagem
+     * começa em {@code max(1º do mês, termoInicial)}. Se o termo for após o fim do mês, retorna 0.
+     * {@code termoInicial} nulo → mês civil completo.
+     */
+    public BigDecimal calcularHorasPrevistasNoMes(
+            YearMonth ym, LocalDate termoInicial, Set<LocalDate> diasNaoUtil) {
+        if (ym == null) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        LocalDate fimMes = ym.atEndOfMonth();
+        LocalDate inicioMes = ym.atDay(1);
+        LocalDate inicio = inicioMes;
+        if (termoInicial != null) {
+            if (termoInicial.isAfter(fimMes)) {
+                return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            }
+            if (termoInicial.isAfter(inicioMes)) {
+                inicio = termoInicial;
+            }
+        }
+        int dias = contarDiasUteis(inicio, fimMes, diasNaoUtil);
+        return BigDecimal.valueOf(dias)
+                .multiply(BigDecimal.valueOf(HORAS_POR_DIA_UTIL))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
      * Calcula horas por mês: dias úteis no recorte da tarefa × {@link #HORAS_POR_DIA_UTIL}.
      * Sem divisão proporcional do total. A soma dos meses fica entre o bruto calculado e
      * {@code horasExecutadasLimite}: se o bruto for menor, o saldo vai ao último mês com horas;
