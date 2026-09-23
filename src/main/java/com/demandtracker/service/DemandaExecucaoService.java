@@ -296,10 +296,17 @@ public class DemandaExecucaoService {
 
     @Transactional
     public void delete(Long id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Execução da demanda não encontrada com ID: " + id);
+        DemandaExecucao execucao = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Execução da demanda não encontrada com ID: " + id));
+        DemandaTecnica demanda = execucao.getDemanda();
+
+        repository.delete(execucao);
+        repository.flush();
+
+        if (demanda != null) {
+            demanda.setStatus(StatusDemandaTecnica.D.getCodigo());
+            demandaTecnicaRepository.save(demanda);
         }
-        repository.deleteById(id);
     }
 
     /**
