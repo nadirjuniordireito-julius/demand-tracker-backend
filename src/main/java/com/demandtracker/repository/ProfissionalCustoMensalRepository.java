@@ -47,4 +47,6 @@ public interface ProfissionalCustoMensalRepository extends JpaRepository<Profiss
     Page<ProfissionalCustoMensal> findByProfissionalIdAndAnoAndMes(Long profissionalId, Integer ano, Integer mes, Pageable pageable);
 
     List<ProfissionalCustoMensal> findByProfissionalId(Long profissionalId);
+
+    List<ProfissionalCustoMensal> findByAnoAndMesAndProfissionalIdIn(Integer ano, Integer mes, List<Long> profissionalIds);
 }
