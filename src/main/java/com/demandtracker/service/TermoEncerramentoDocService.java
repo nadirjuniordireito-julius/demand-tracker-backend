@@ -125,7 +125,8 @@ public class TermoEncerramentoDocService {
         TermoEncerramentoDoc doc = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Documento não encontrado com ID: " + id));
 
-        
+        doc.setDataAssinatura(LocalDateTime.now());
+
         if (dto.getArquivoPdf() != null && !dto.getArquivoPdf().isEmpty()) {
             // Valida se o arquivo é PDF
             if (!dto.getArquivoPdf().getContentType().equals("application/pdf")) {

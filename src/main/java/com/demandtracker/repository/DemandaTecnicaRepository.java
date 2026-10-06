@@ -74,5 +74,18 @@ public interface DemandaTecnicaRepository extends JpaRepository<DemandaTecnica, 
         @Param("projetoId") Long projetoId,
         Pageable pageable
     );
+
+    /**
+     * Demandas do projeto excluindo canceladas (status Z), com meta e produto carregados.
+     * Status nulo é incluído.
+     */
+    @Query("""
+        SELECT d FROM DemandaTecnica d
+        LEFT JOIN FETCH d.metaProduto mp
+        LEFT JOIN FETCH mp.projetoMeta
+        WHERE d.projeto.id = :projetoId
+          AND (d.status IS NULL OR d.status <> 'Z')
+        """)
+    List<DemandaTecnica> findByProjetoIdExcludingCanceladas(@Param("projetoId") Long projetoId);
     
 }

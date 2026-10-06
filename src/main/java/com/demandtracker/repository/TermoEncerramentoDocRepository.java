@@ -40,4 +40,10 @@ public interface TermoEncerramentoDocRepository extends JpaRepository<TermoEncer
           AND doc.arquivoPdf IS NOT NULL
         """)
     List<Object[]> findArquivosPdfByProjetoMetaId(@Param("projetoMetaId") Long projetoMetaId);
+
+    /**
+     * Indica se o PDF do termo de encerramento da demanda possui dataAssinatura preenchida,
+     * sem carregar o arquivo PDF.
+     */
+    boolean existsByTermoEncerramentoDemandaTecnicaIdAndDataAssinaturaIsNotNull(Long demandaTecnicaId);
 }

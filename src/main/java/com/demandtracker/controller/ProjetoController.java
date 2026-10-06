@@ -5,12 +5,15 @@ import com.demandtracker.dto.ProjetoDTO;
 import com.demandtracker.dto.ProjetoTotaisDTO;
 import com.demandtracker.dto.ProjetoUpdateDTO;
 import com.demandtracker.dto.SemaforoNodeDTO;
+import com.demandtracker.service.ProjetoPlanilhaService;
 import com.demandtracker.service.ProjetoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProjetoController {
     
     private final ProjetoService projetoService;
+    private final ProjetoPlanilhaService projetoPlanilhaService;
     
     @GetMapping
     public ResponseEntity<Page<ProjetoDTO>> findAll(
@@ -44,6 +48,25 @@ public class ProjetoController {
     @GetMapping("/{id}/semaforo")
     public ResponseEntity<SemaforoNodeDTO> getSemaforo(@PathVariable Long id) {
         return ResponseEntity.ok(projetoService.getSemaforo(id));
+    }
+
+    /**
+     * Download da planilha xlsx das demandas do projeto (exceto canceladas).
+     * GET /api/projetos/{id}/planilha
+     */
+    @GetMapping("/{id}/planilha")
+    public ResponseEntity<byte[]> downloadPlanilhaDemandas(@PathVariable Long id) {
+        ProjetoPlanilhaService.PlanilhaDownloadResult result = projetoPlanilhaService.gerarPlanilhaDemandas(id);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", result.fileName());
+        headers.setContentLength(result.content().length);
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(result.content());
     }
     
     @PostMapping
