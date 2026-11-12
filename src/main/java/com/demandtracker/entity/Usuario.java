@@ -13,6 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Usuario {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -56,7 +57,7 @@ public class Usuario {
     private UsuarioFoto foto;
     
     public enum UserProfile {
-        A, O, V
+        A, O, V, D
     }
     
     public enum UserStatus {
